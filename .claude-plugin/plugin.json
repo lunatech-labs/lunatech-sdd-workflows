@@ -1,0 +1,8 @@
+{
+  "name": "spec-swarm",
+  "description": "Spec-driven development with a small agent team: guided spec interview, gated planning, and task-by-task implementation verified by a critic agent.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Luke Woodcock"
+  }
+}
