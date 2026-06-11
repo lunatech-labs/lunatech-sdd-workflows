@@ -78,3 +78,12 @@ Per-project state lives in the target repo under `specs/NNN-slug/`
   to you via journal.md, not silently patched around.
 - **Parallel-ready.** Tasks carry `depends_on:` so independent tasks can
   later run in parallel worktrees; execution is sequential for now.
+
+## Roadmap
+
+- **Local-LLM version.** Eventually this workflow should run fully locally
+  against locally hosted models (e.g. Ollama, as in swarm-kg) via a
+  standalone orchestrator. To keep that door open, the role prompts
+  (planner/implementer/critic), spec template, and phase logic are plain
+  markdown — portable to any runtime. Claude Code-specific glue (agent
+  frontmatter, `/sdd` command, Task-tool dispatch) stays thin and replaceable.

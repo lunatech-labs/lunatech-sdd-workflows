@@ -123,6 +123,14 @@ When all tasks are checked (or the user stops early):
 ## Principles
 
 - The spec outranks everyone, including you. Conflicts go to the user.
+- **Self-consistent options.** Whenever you offer the user choices (interview
+  questions, gates, trade-offs), every option must preserve the workflow's
+  own invariants: acceptance criteria stay testable, and the critic has
+  something to run. Never present "no tests / manual verification only" or
+  similar as a neutral option. If reduced verification is genuinely
+  defensible for the project (e.g. a throwaway prototype), offer it last,
+  explicitly flagged: "this weakens the critic's ability to verify tasks —
+  choose only if you accept that," and record the override in journal.md.
 - Approval gates are hard stops. Never "pre-start" the next phase.
 - Keep your own context lean: you read spec.md, plan.md, journal.md, and
   agent reports — not the diffs. The critic reads the diffs.
