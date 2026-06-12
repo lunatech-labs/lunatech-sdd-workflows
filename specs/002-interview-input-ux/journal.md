@@ -21,3 +21,11 @@ Interview swap verified: 36 tests across agent-loop/specify/e2e, 211 passed 1 sk
 ## 2026-06-12 T3 critic verdict: PASS
 
 Tool progress lines verified: 27 agent-loop tests, 218 passed 1 skipped suite, typecheck clean, re-run by critic. AC3 proven: file tools show paths, run_command the command, emission inside the tool-call loop before validation so all modes and malformed/report calls get lines. Gate 2 decision honored end-to-end ("[critic] -> report PASS" asserted through the mock). Truncation at 80 chars with newline collapse and no-throw robustness unit-tested. Happy-path assertion change is a strengthening (exact strings, pre-flagged by the plan). Supervisor report lines fall back to spec_path, conformant with the gate decision.
+
+## 2026-06-12 T4 critic verdict: PASS
+
+Regression sweep verified independently: 218 passed 1 skipped, typecheck clean, build clean, working tree identical to the T3 commit (T4 changed nothing). Critic re-ran the live smoke test against devstral:latest: passed in 6.6s with the new progress lines visible against a real model, confirming the Gate 2 report-summary behavior end to end. Ruling: plan.md's Risks section still records the pre-Gate-2 leaning (empty report summary); journal.md holds the binding decision and shipped behavior matches it; doc inconsistency noted, no action required.
+
+## 2026-06-12 All tasks complete
+
+T1-T4 all PASS on first attempt (zero retries, zero drift escalations). Status IN PROGRESS to DONE. Final suite: 218 passed, 1 skipped; typecheck and build clean; live smoke green.
