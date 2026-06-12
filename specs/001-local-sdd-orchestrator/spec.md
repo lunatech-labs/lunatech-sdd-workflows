@@ -1,6 +1,6 @@
 # Feature Spec: Local SDD Orchestrator (spec-swarm on Ollama)
 
-> Status: SPECIFIED
+> Status: DONE
 > Spec folder: specs/001-local-sdd-orchestrator/
 
 ## 1. Mission / Why
@@ -71,21 +71,21 @@ A user can run the orchestrator CLI from any target repo and be taken through SP
      Each task: testable in isolation, ~30-60 min of agent work,
      maps to at least one acceptance criterion. -->
 
-1. [ ] T1: Project scaffold: package.json, strict tsconfig, vitest, npm scripts, sanity test - verifies: AC11 - depends_on: none
-2. [ ] T2: Vendor role prompts and spec template with provenance headers, prompt loader, provenance test - verifies: AC13 - depends_on: T1
-3. [ ] T3: Test helpers: scriptable mock Ollama server (tags, show, chat with tool_calls) and temp-repo fixtures - verifies: AC11 - depends_on: T1
-4. [ ] T4: Ollama fetch client: chat with tools, listModels, showCapabilities, ping with actionable errors - verifies: AC9 - depends_on: T3
-5. [ ] T5: Path sandbox (repo-root confinement) and file tools: read, write, list, search - verifies: AC7 - depends_on: T3
-6. [ ] T6: Terminal UI (ask, confirm, select via node:readline) and confirmed run-command tool with denial-as-tool-error - verifies: AC6 - depends_on: T1
-7. [ ] T7: Tool registry with per-role subsets and agent loop with max-iterations and malformed-call guards - verifies: AC15, AC6 - depends_on: T4, T5, T6
-8. [ ] T8: Config loading, interactive model selection from /api/tags, capability warning, no-hardcoded-models scan, startup reachability error - verifies: AC8, AC9 - depends_on: T4, T6
-9. [ ] T9: Spec file operations: NNN-slug numbering, status transitions, task parsing, checkbox ticking, section edits with sections 1-5 protection, append-only journal, resume scan - verifies: AC3, AC10 - depends_on: T3
-10. [ ] T10: Git safety check (dirty tree or no history requires confirmation) and Phase 0 orient with resume offer - verifies: AC16, AC10 - depends_on: T6, T9
-11. [ ] T11: SPECIFY phase: supervisor interview loop, spec validation, Gate 1 approve/changes/abort, DRAFT to SPECIFIED - verifies: AC1, AC5 - depends_on: T2, T7, T9
-12. [ ] T12: PLAN phase: planner dispatch, containment check (sections 1-5 byte-identical, section 7 append-only), Gate 2, SPECIFIED to PLANNED - verifies: AC2, AC5 - depends_on: T2, T7, T9
-13. [ ] T13: IMPLEMENT loop: per-task implementer then critic dispatches, tick and journal on PASS, max 2 retries on FAIL then escalate, drift rule halt - verifies: AC3, AC4, AC12 - depends_on: T2, T7, T9
-14. [ ] T14: PRESENT phase and CLI entry wiring: full phase machine, AC verification summary, drift report, end-to-end mocked test including gate-rejection branches - verifies: AC14, AC5 - depends_on: T8, T10, T11, T12, T13
-15. [ ] T15: Opt-in real-Ollama smoke test: env-flag gated, auto-skipped when unreachable, validates real tool-call parsing - verifies: AC11 - depends_on: T7, T8
+1. [x] T1: Project scaffold: package.json, strict tsconfig, vitest, npm scripts, sanity test - verifies: AC11 - depends_on: none
+2. [x] T2: Vendor role prompts and spec template with provenance headers, prompt loader, provenance test - verifies: AC13 - depends_on: T1
+3. [x] T3: Test helpers: scriptable mock Ollama server (tags, show, chat with tool_calls) and temp-repo fixtures - verifies: AC11 - depends_on: T1
+4. [x] T4: Ollama fetch client: chat with tools, listModels, showCapabilities, ping with actionable errors - verifies: AC9 - depends_on: T3
+5. [x] T5: Path sandbox (repo-root confinement) and file tools: read, write, list, search - verifies: AC7 - depends_on: T3
+6. [x] T6: Terminal UI (ask, confirm, select via node:readline) and confirmed run-command tool with denial-as-tool-error - verifies: AC6 - depends_on: T1
+7. [x] T7: Tool registry with per-role subsets and agent loop with max-iterations and malformed-call guards - verifies: AC15, AC6 - depends_on: T4, T5, T6
+8. [x] T8: Config loading, interactive model selection from /api/tags, capability warning, no-hardcoded-models scan, startup reachability error - verifies: AC8, AC9 - depends_on: T4, T6
+9. [x] T9: Spec file operations: NNN-slug numbering, status transitions, task parsing, checkbox ticking, section edits with sections 1-5 protection, append-only journal, resume scan - verifies: AC3, AC10 - depends_on: T3
+10. [x] T10: Git safety check (dirty tree or no history requires confirmation) and Phase 0 orient with resume offer - verifies: AC16, AC10 - depends_on: T6, T9
+11. [x] T11: SPECIFY phase: supervisor interview loop, spec validation, Gate 1 approve/changes/abort, DRAFT to SPECIFIED - verifies: AC1, AC5 - depends_on: T2, T7, T9
+12. [x] T12: PLAN phase: planner dispatch, containment check (sections 1-5 byte-identical, section 7 append-only), Gate 2, SPECIFIED to PLANNED - verifies: AC2, AC5 - depends_on: T2, T7, T9
+13. [x] T13: IMPLEMENT loop: per-task implementer then critic dispatches, tick and journal on PASS, max 2 retries on FAIL then escalate, drift rule halt - verifies: AC3, AC4, AC12 - depends_on: T2, T7, T9
+14. [x] T14: PRESENT phase and CLI entry wiring: full phase machine, AC verification summary, drift report, end-to-end mocked test including gate-rejection branches - verifies: AC14, AC5 - depends_on: T8, T10, T11, T12, T13
+15. [x] T15: Opt-in real-Ollama smoke test: env-flag gated, auto-skipped when unreachable, validates real tool-call parsing - verifies: AC11 - depends_on: T7, T8
 
 ## 7. Open Questions
 
