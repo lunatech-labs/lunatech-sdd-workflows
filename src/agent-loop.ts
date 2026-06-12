@@ -17,8 +17,9 @@
  *     one more fails the dispatch.
  *
  * Modes:
- *   - interview: plain assistant text is shown to the user through the
- *     injected UI and the typed answer becomes the next user message
+ *   - interview: plain assistant text is printed as output through the
+ *     injected UI's readAnswer (never used as the readline prompt string)
+ *     and the multi-line answer becomes the next user message
  *     (the supervisor's SPECIFY interview).
  *   - worker: plain assistant text without tool calls gets a corrective
  *     nudge, which counts toward the malformed-call cap.
@@ -60,7 +61,7 @@ export interface RunAgentOptions {
   baseUrl: string;
   /** Model to drive this role. */
   model: string;
-  /** Required in interview mode: plain assistant text goes through ui.ask. */
+  /** Required in interview mode: plain assistant text goes through ui.readAnswer. */
   ui?: UI;
   /** Progress line per chat call. Defaults to stderr; inject a no-op in tests. */
   onProgress?: (line: string) => void;
@@ -127,7 +128,7 @@ export async function runAgent(options: RunAgentOptions): Promise<Record<string,
     if (reply.toolCalls.length === 0) {
       const text = reply.content.trim();
       if (mode === 'interview' && text !== '') {
-        const answer = await (ui as UI).ask(text);
+        const answer = await (ui as UI).readAnswer(text);
         messages.push({ role: 'user', content: answer });
         continue;
       }

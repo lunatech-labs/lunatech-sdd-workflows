@@ -20,14 +20,19 @@ import type { UI } from '../src/ui';
 interface ScriptedUI extends UI {
   asked: string[];
   selected: Array<{ label: string; options: string[] }>;
+  readAnswered: string[];
 }
 
-function scriptedUI(script: { asks?: string[]; selects?: string[] } = {}): ScriptedUI {
+function scriptedUI(
+  script: { asks?: string[]; selects?: string[]; readAnswers?: string[] } = {},
+): ScriptedUI {
   const asks = [...(script.asks ?? [])];
   const selects = [...(script.selects ?? [])];
+  const readAnswers = [...(script.readAnswers ?? [])];
   const ui: ScriptedUI = {
     asked: [],
     selected: [],
+    readAnswered: [],
     async ask(question) {
       ui.asked.push(question);
       const answer = asks.shift();
@@ -43,8 +48,11 @@ function scriptedUI(script: { asks?: string[]; selects?: string[] } = {}): Scrip
       if (answer === undefined) throw new Error('scriptedUI: no scripted select answer left');
       return answer;
     },
-    async readAnswer() {
-      throw new Error('scriptedUI: readAnswer is not scripted');
+    async readAnswer(message) {
+      ui.readAnswered.push(message);
+      const answer = readAnswers.shift();
+      if (answer === undefined) throw new Error('scriptedUI: no scripted readAnswer answer left');
+      return answer;
     },
   };
   return ui;
@@ -185,7 +193,8 @@ describe('specify phase and Gate 1', () => {
       ...writeAndReport(draftSpec()),
     ]);
     const ui = scriptedUI({
-      asks: ['Build a demo feature.', 'Testing the SPECIFY phase.'],
+      asks: ['Build a demo feature.'],
+      readAnswers: ['Testing the SPECIFY phase.'],
       selects: [GATE1_APPROVE],
     });
 
@@ -203,10 +212,11 @@ describe('specify phase and Gate 1', () => {
     expect(saved).toContain('Build a demo feature so the SPECIFY phase can be tested.');
     expect(validateDraftSpec(saved)).toEqual([expect.stringContaining('DRAFT')]);
 
-    // The interview ran through the injected UI: opening request, then the
-    // model's question verbatim.
-    expect(ui.asked[0]).toContain('Describe the feature');
-    expect(ui.asked[1]).toBe('What is the mission of this feature?');
+    // The interview ran through the injected UI: the opening request stays
+    // on ask; the model's question goes verbatim to readAnswer as printed
+    // output, never as a prompt string.
+    expect(ui.asked).toEqual([expect.stringContaining('Describe the feature')]);
+    expect(ui.readAnswered).toEqual(['What is the mission of this feature?']);
 
     // The phase stopped at Gate 1 and offered the three choices.
     expect(ui.selected).toHaveLength(1);

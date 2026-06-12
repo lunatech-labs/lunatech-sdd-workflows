@@ -49,7 +49,7 @@ A user can paste a multi-line answer and have it arrive as one message, always s
      maps to at least one acceptance criterion. -->
 
 1. [x] T1: Add UI.readAnswer (multi-line input with "you> "/"...> " markers, empty line submits, one readline interface per answer) to src/ui.ts; create tests/ui.test.ts covering markers, verbatim 5-line paste, and no residual input; add a readAnswer stub to every scripted UI in tests so typecheck stays clean - verifies: AC1, AC2 - depends_on: none
-2. [ ] T2: Switch agent-loop interview mode from ui.ask(text) to ui.readAnswer(text) so model text is printed output, never the prompt string; update interview tests in tests/agent-loop.test.ts and tests/specify.test.ts, asserting a multi-line answer arrives as one user message - verifies: AC1, AC2 - depends_on: T1
+2. [x] T2: Switch agent-loop interview mode from ui.ask(text) to ui.readAnswer(text) so model text is printed output, never the prompt string; update interview tests in tests/agent-loop.test.ts and tests/specify.test.ts, asserting a multi-line answer arrives as one user message - verifies: AC1, AC2 - depends_on: T1
 3. [ ] T3: Emit "[role] -> <tool> <summary>" via onProgress for every tool call in all modes: add summarizeToolCall to src/tools/registry.ts (file tools: path; run_command: command; 80-char truncation; report included) with unit tests, wire into src/agent-loop.ts, and update progress assertions in tests/agent-loop.test.ts - verifies: AC3 - depends_on: none
 4. [ ] T4: Full regression sweep: npm test green including all pre-existing tests, npm run typecheck clean; fix only breakage introduced by T1-T3 - verifies: AC4 - depends_on: T1, T2, T3
 

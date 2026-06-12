@@ -12,14 +12,19 @@ import type { UI } from '../src/ui';
 interface ScriptedUI extends UI {
   asked: string[];
   confirmed: string[];
+  readAnswered: string[];
 }
 
-function scriptedUI(script: { asks?: string[]; confirms?: boolean[] } = {}): ScriptedUI {
+function scriptedUI(
+  script: { asks?: string[]; confirms?: boolean[]; readAnswers?: string[] } = {},
+): ScriptedUI {
   const asks = [...(script.asks ?? [])];
   const confirms = [...(script.confirms ?? [])];
+  const readAnswers = [...(script.readAnswers ?? [])];
   const ui: ScriptedUI = {
     asked: [],
     confirmed: [],
+    readAnswered: [],
     async ask(question) {
       ui.asked.push(question);
       const answer = asks.shift();
@@ -35,8 +40,11 @@ function scriptedUI(script: { asks?: string[]; confirms?: boolean[] } = {}): Scr
     async select() {
       throw new Error('scriptedUI: select is not scripted');
     },
-    async readAnswer() {
-      throw new Error('scriptedUI: readAnswer is not scripted');
+    async readAnswer(message) {
+      ui.readAnswered.push(message);
+      const answer = readAnswers.shift();
+      if (answer === undefined) throw new Error('scriptedUI: no scripted readAnswer answer left');
+      return answer;
     },
   };
   return ui;
@@ -323,12 +331,12 @@ describe('agent loop', () => {
     expect(error.message).toContain('malformed');
   });
 
-  test('interview mode routes plain text through the UI and feeds the answer back', async () => {
+  test('interview mode routes plain text through readAnswer and feeds the answer back', async () => {
     mock.script([
       { content: 'What is the mission of this feature?' },
       { tool_calls: [call(REPORT_TOOL_NAME, { spec_path: 'specs/001-x/spec.md' })] },
     ]);
-    const ui = scriptedUI({ asks: ['Build a local SDD orchestrator.'] });
+    const ui = scriptedUI({ readAnswers: ['Build a local SDD orchestrator.'] });
     const tools = createToolRegistry({ repoRoot: repo.root, role: 'supervisor', ui });
 
     const report = await runAgent(
@@ -336,11 +344,40 @@ describe('agent loop', () => {
     );
 
     expect(report).toEqual({ spec_path: 'specs/001-x/spec.md' });
-    expect(ui.asked).toEqual(['What is the mission of this feature?']);
+    // The model's text reached readAnswer as printed output, never ask
+    // (where it would have become the readline prompt string).
+    expect(ui.readAnswered).toEqual(['What is the mission of this feature?']);
+    expect(ui.asked).toEqual([]);
     const second = chatMessages(mock, 1);
     const userReply = second[second.length - 1];
     expect(userReply.role).toBe('user');
     expect(userReply.content).toBe('Build a local SDD orchestrator.');
+  });
+
+  test('interview mode: a multi-line answer arrives at the model as ONE user message (AC2)', async () => {
+    const pasted = 'line one\nline two\nline three\nline four\nline five';
+    mock.script([
+      { content: 'Paste the requirements.' },
+      { tool_calls: [call(REPORT_TOOL_NAME, { spec_path: 'specs/001-x/spec.md' })] },
+    ]);
+    const ui = scriptedUI({ readAnswers: [pasted] });
+    const tools = createToolRegistry({ repoRoot: repo.root, role: 'supervisor', ui });
+
+    await runAgent(
+      baseOptions({ role: 'supervisor', task: undefined, mode: 'interview', tools, ui }),
+    );
+
+    // Wire level: the second chat request carries the whole paste verbatim
+    // as a single user message, not one message per line.
+    const second = chatMessages(mock, 1);
+    const userMessages = second.filter(m => m.role === 'user');
+    // First user message is the dispatch context; exactly one more for the answer.
+    expect(userMessages).toHaveLength(2);
+    expect(userMessages[1].content).toBe(pasted);
+    expect(second[second.length - 1]).toEqual({ role: 'user', content: pasted });
+    // No residual lines answered anything else.
+    expect(ui.readAnswered).toEqual(['Paste the requirements.']);
+    expect(ui.asked).toEqual([]);
   });
 
   test('interview mode without a UI fails immediately', async () => {

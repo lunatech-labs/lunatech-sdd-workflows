@@ -13,3 +13,7 @@ Plan and 4-task breakdown approved by user. Status SPECIFIED to PLANNED (then IN
 ## 2026-06-12 T1 critic verdict: PASS
 
 readAnswer verified: 9/9 ui tests, 210 passed 1 skipped suite (all 201 pre-existing green), typecheck clean, re-run by critic. The paste test writes 5 lines plus blank as one chunk and would fail under the old per-question readline pattern, so it genuinely guards the defect; follow-up ask receives only fresh input. ask/confirm/select zero diff; 8 stub updates stub-only. Disclosed artifact accepted: a trailing "...> " prompt prints before the submitting blank line.
+
+## 2026-06-12 T2 critic verdict: PASS
+
+Interview swap verified: 36 tests across agent-loop/specify/e2e, 211 passed 1 skipped suite, typecheck clean, re-run by critic. Zero ui.ask calls remain in agent-loop.ts; surviving ask callers all pass fixed strings, never model output. Wire-level test proves a 5-line answer reaches the model as exactly one verbatim user message (count assertion would catch splitting). Scope exactly the three planned files.
