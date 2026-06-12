@@ -38,6 +38,9 @@ function scriptedUI(script: { confirms?: boolean[]; selects?: string[]; asks?: s
       if (answer === undefined) throw new Error(`unscripted select: ${label}`);
       return answer;
     },
+    async readAnswer(message) {
+      throw new Error(`unscripted readAnswer: ${message}`);
+    },
   };
 }
 

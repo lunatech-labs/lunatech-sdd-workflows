@@ -35,6 +35,9 @@ function scriptedUI(script: { asks?: string[]; confirms?: boolean[] } = {}): Scr
     async select() {
       throw new Error('scriptedUI: select is not scripted');
     },
+    async readAnswer() {
+      throw new Error('scriptedUI: readAnswer is not scripted');
+    },
   };
   return ui;
 }

@@ -52,6 +52,9 @@ function scriptedUI(
       if (answer === undefined) throw new Error(`scriptedUI: unscripted select: ${label}`);
       return answer;
     },
+    async readAnswer(message) {
+      throw new Error(`scriptedUI: unscripted readAnswer: ${message}`);
+    },
   };
   return ui;
 }

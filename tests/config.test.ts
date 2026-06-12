@@ -55,6 +55,9 @@ function scriptedUI(script: {
       if (next === undefined) throw new Error(`unscripted select: ${label}`);
       return next;
     },
+    async readAnswer(message) {
+      throw new Error(`unscripted readAnswer: ${message}`);
+    },
   };
 }
 

@@ -66,6 +66,9 @@ const ui: UI = {
   async select() {
     throw new Error('smoke: select is not available');
   },
+  async readAnswer() {
+    throw new Error('smoke: worker mode must not read an answer');
+  },
 };
 
 const SYSTEM_PROMPT = [

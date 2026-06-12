@@ -14,12 +14,22 @@ export interface UI {
   confirm(question: string): Promise<boolean>;
   /** Present a numbered list of options and return the chosen option. */
   select(label: string, options: string[]): Promise<string>;
+  /**
+   * Print the message as output (blank line above), then read a multi-line
+   * answer behind a "you> " marker ("...> " on continuation lines). An empty
+   * line submits; the lines are returned verbatim, joined with newlines, with
+   * the terminating empty line dropped.
+   */
+  readAnswer(message: string): Promise<string>;
 }
 
 /**
  * Build a UI backed by readline over the given streams (default: the
- * process stdin/stdout). A fresh readline interface is created per question
- * so stdin is not held open between prompts.
+ * process stdin/stdout). For single-line prompts a fresh readline interface
+ * is created per question so stdin is not held open between prompts;
+ * readAnswer instead holds ONE interface open for the whole answer so a
+ * multi-line paste is consumed line by line instead of leaking buffered
+ * lines into later prompts.
  */
 export function createReadlineUI(
   input: NodeJS.ReadableStream = process.stdin,
@@ -64,5 +74,37 @@ export function createReadlineUI(
     }
   };
 
-  return { ask, confirm, select };
+  const readAnswer = (message: string): Promise<string> => {
+    output.write(`\n${message}\n`);
+    // One interface for the entire answer: rl.question-per-line would let a
+    // multi-line paste emit lines while no listener is attached, dropping or
+    // misrouting everything after the first line.
+    const rl = readline.createInterface({ input, output });
+    return new Promise(resolve => {
+      const lines: string[] = [];
+      let done = false;
+      const finish = (): void => {
+        if (done) return;
+        done = true;
+        rl.close();
+        resolve(lines.join('\n'));
+      };
+      rl.setPrompt('you> ');
+      rl.prompt();
+      rl.on('line', line => {
+        if (done) return;
+        if (line === '') {
+          finish();
+          return;
+        }
+        lines.push(line);
+        rl.setPrompt('...> ');
+        rl.prompt();
+      });
+      // EOF (e.g. ctrl-D) submits whatever was collected so far.
+      rl.on('close', finish);
+    });
+  };
+
+  return { ask, confirm, select, readAnswer };
 }

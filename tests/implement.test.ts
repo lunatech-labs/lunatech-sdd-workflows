@@ -40,6 +40,9 @@ function scriptedUI(script: { asks?: string[]; selects?: string[] } = {}): Scrip
       if (answer === undefined) throw new Error('scriptedUI: no scripted select answer left');
       return answer;
     },
+    async readAnswer() {
+      throw new Error('scriptedUI: readAnswer is not scripted');
+    },
   };
   return ui;
 }
