@@ -17,3 +17,7 @@ readAnswer verified: 9/9 ui tests, 210 passed 1 skipped suite (all 201 pre-exist
 ## 2026-06-12 T2 critic verdict: PASS
 
 Interview swap verified: 36 tests across agent-loop/specify/e2e, 211 passed 1 skipped suite, typecheck clean, re-run by critic. Zero ui.ask calls remain in agent-loop.ts; surviving ask callers all pass fixed strings, never model output. Wire-level test proves a 5-line answer reaches the model as exactly one verbatim user message (count assertion would catch splitting). Scope exactly the three planned files.
+
+## 2026-06-12 T3 critic verdict: PASS
+
+Tool progress lines verified: 27 agent-loop tests, 218 passed 1 skipped suite, typecheck clean, re-run by critic. AC3 proven: file tools show paths, run_command the command, emission inside the tool-call loop before validation so all modes and malformed/report calls get lines. Gate 2 decision honored end-to-end ("[critic] -> report PASS" asserted through the mock). Truncation at 80 chars with newline collapse and no-throw robustness unit-tested. Happy-path assertion change is a strengthening (exact strings, pre-flagged by the plan). Supervisor report lines fall back to spec_path, conformant with the gate decision.

@@ -3,7 +3,12 @@ import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import { startMockOllama, MockOllamaServer, MockToolCall } from './helpers/mock-ollama';
 import { makeTempRepo, TempRepo } from './helpers/temp-repo';
-import { createToolRegistry, AgentRole, REPORT_TOOL_NAME } from '../src/tools/registry';
+import {
+  createToolRegistry,
+  summarizeToolCall,
+  AgentRole,
+  REPORT_TOOL_NAME,
+} from '../src/tools/registry';
 import { runAgent, AgentLoopError, MALFORMED_CALL_CAP, RunAgentOptions } from '../src/agent-loop';
 import type { ChatMessage } from '../src/ollama';
 import type { UI } from '../src/ui';
@@ -152,6 +157,48 @@ describe('tool registry', () => {
     expect(badType.malformed).toBe(true);
   });
 
+  test('summarizeToolCall: file tools show the path, list/search the pattern', () => {
+    expect(summarizeToolCall('read_file', { path: 'src/a.ts' })).toBe('src/a.ts');
+    expect(summarizeToolCall('write_file', { path: 'docs/b.md', content: 'body' })).toBe(
+      'docs/b.md',
+    );
+    expect(summarizeToolCall('list_files', { pattern: 'specs/**' })).toBe('specs/**');
+    expect(summarizeToolCall('search_files', { pattern: 'TODO', glob: 'src/*.ts' })).toBe('TODO');
+  });
+
+  test('summarizeToolCall: run_command shows the command', () => {
+    expect(summarizeToolCall('run_command', { command: 'npm test' })).toBe('npm test');
+  });
+
+  test('summarizeToolCall: report shows status or verdict, or the spec path', () => {
+    expect(summarizeToolCall(REPORT_TOOL_NAME, CLEAN_REPORT)).toBe('CLEAN');
+    expect(summarizeToolCall(REPORT_TOOL_NAME, { verdict: 'PASS', details: 'verified' })).toBe(
+      'PASS',
+    );
+    expect(summarizeToolCall(REPORT_TOOL_NAME, { spec_path: 'specs/001-x/spec.md' })).toBe(
+      'specs/001-x/spec.md',
+    );
+    // Planner reports have no status, verdict, or spec_path: empty summary.
+    expect(summarizeToolCall(REPORT_TOOL_NAME, { summary: 'planned the work' })).toBe('');
+  });
+
+  test('summarizeToolCall truncates to 80 chars and collapses newlines', () => {
+    const long = summarizeToolCall('run_command', { command: 'x'.repeat(200) });
+    expect(long).toHaveLength(83);
+    expect(long).toBe(`${'x'.repeat(80)}...`);
+    expect(summarizeToolCall('run_command', { command: 'echo a\n  echo b\necho c' })).toBe(
+      'echo a echo b echo c',
+    );
+  });
+
+  test('summarizeToolCall never throws on unknown tools or missing/malformed args', () => {
+    expect(summarizeToolCall('read_file', {})).toBe('');
+    expect(summarizeToolCall('run_command', { command: 42 })).toBe('');
+    expect(summarizeToolCall('', {})).toBe('');
+    expect(summarizeToolCall('make_coffee', { strength: 'strong' })).toBe('');
+    expect(summarizeToolCall('read_file', null as unknown as Record<string, unknown>)).toBe('');
+  });
+
   test('ordinary tool failures are not flagged malformed', async () => {
     const repo = await makeTempRepo();
     try {
@@ -220,9 +267,40 @@ describe('agent loop', () => {
     expect(second[second.length - 2].tool_calls).toEqual([
       { function: { name: 'read_file', arguments: { path: 'notes.txt' } } },
     ]);
-    // One "model thinking" progress line per chat call.
-    expect(progress).toHaveLength(2);
+    // One "model thinking" line per chat call plus one line per tool call.
+    expect(progress).toHaveLength(4);
     expect(progress[0]).toContain('mock-model');
+    expect(progress[1]).toBe('[implementer] -> read_file notes.txt');
+    expect(progress[3]).toBe('[implementer] -> report CLEAN');
+  });
+
+  test('every tool call emits a "[role] -> tool summary" progress line (AC3)', async () => {
+    mock.script([
+      { tool_calls: [call('run_command', { command: 'echo hello' })] },
+      { tool_calls: [call(REPORT_TOOL_NAME, CLEAN_REPORT)] },
+    ]);
+    const ui = scriptedUI({ confirms: [true] });
+    const tools = createToolRegistry({ repoRoot: repo.root, role: 'implementer', ui });
+    const progress: string[] = [];
+
+    await runAgent(baseOptions({ tools, onProgress: line => progress.push(line) }));
+
+    expect(progress).toContain('[implementer] -> run_command echo hello');
+    expect(progress).toContain('[implementer] -> report CLEAN');
+  });
+
+  test('a critic report progress line carries the verdict', async () => {
+    mock.script([
+      { tool_calls: [call(REPORT_TOOL_NAME, { verdict: 'PASS', details: 'verified' })] },
+    ]);
+    const tools = createToolRegistry({ repoRoot: repo.root, role: 'critic', ui: scriptedUI() });
+    const progress: string[] = [];
+
+    await runAgent(
+      baseOptions({ role: 'critic', tools, onProgress: line => progress.push(line) }),
+    );
+
+    expect(progress).toContain('[critic] -> report PASS');
   });
 
   test('tool definitions for the role are sent with every chat call', async () => {

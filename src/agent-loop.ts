@@ -25,12 +25,13 @@
  *     nudge, which counts toward the malformed-call cap.
  *
  * Because chat is non-streaming, every chat call prints a "model thinking"
- * progress line so long waits do not look like hangs; onProgress is
- * injectable so tests stay quiet.
+ * progress line so long waits do not look like hangs, and every tool call
+ * prints "[role] -> <tool> <summary>" (summarizeToolCall) so tool-using
+ * steps are visible; onProgress is injectable so tests stay quiet.
  */
 import { chat, ChatMessage, WireToolCall } from './ollama';
 import type { UI } from './ui';
-import { AgentRole, REPORT_TOOL_NAME, ToolRegistry } from './tools/registry';
+import { AgentRole, REPORT_TOOL_NAME, ToolRegistry, summarizeToolCall } from './tools/registry';
 
 /** Malformed tool calls tolerated per dispatch; one more fails it. */
 export const MALFORMED_CALL_CAP = 3;
@@ -140,6 +141,9 @@ export async function runAgent(options: RunAgentOptions): Promise<Record<string,
     }
 
     for (const call of reply.toolCalls) {
+      const summary = summarizeToolCall(call.name, call.arguments);
+      const toolName = call.name === '' ? 'unknown' : call.name;
+      onProgress(`[${role}] -> ${toolName}${summary === '' ? '' : ` ${summary}`}`);
       if (call.malformed !== undefined) {
         countMalformed(call.malformed);
         messages.push(toolErrorMessage(call.name, call.malformed));

@@ -185,6 +185,48 @@ const REPORT_BY_ROLE: Record<AgentRole, ToolDefinition> = {
   ),
 };
 
+/** Max length of a tool-call progress summary before truncation. */
+const SUMMARY_MAX_LENGTH = 80;
+
+/**
+ * One-line summary of a tool call's arguments for progress output: file
+ * tools show the path, list_files/search_files the pattern, run_command the
+ * command, and report its status or verdict field (the implementer's
+ * CLEAN/DRIFT, the critic's PASS/FAIL/DRIFT) or, failing those, the
+ * supervisor's spec_path. Newlines collapse to spaces and the summary
+ * truncates to 80 chars with a trailing "...". Never throws: unknown tools
+ * and missing or wrongly typed arguments summarize to the empty string.
+ */
+export function summarizeToolCall(name: string, args: Record<string, unknown>): string {
+  const field = (key: string): string => {
+    const value = args === null || typeof args !== 'object' ? undefined : args[key];
+    return typeof value === 'string' ? value : '';
+  };
+  let summary: string;
+  switch (name) {
+    case 'read_file':
+    case 'write_file':
+      summary = field('path');
+      break;
+    case 'list_files':
+    case 'search_files':
+      summary = field('pattern');
+      break;
+    case 'run_command':
+      summary = field('command');
+      break;
+    case REPORT_TOOL_NAME:
+      summary = field('status') || field('verdict') || field('spec_path');
+      break;
+    default:
+      summary = '';
+  }
+  const collapsed = summary.replace(/\s*\n\s*/g, ' ').trim();
+  return collapsed.length > SUMMARY_MAX_LENGTH
+    ? `${collapsed.slice(0, SUMMARY_MAX_LENGTH)}...`
+    : collapsed;
+}
+
 /** Check args against a parameters schema: required keys, types, enums. */
 function validateArgs(schema: ParametersSchema, args: Record<string, unknown>): ValidationResult {
   for (const key of schema.required) {
