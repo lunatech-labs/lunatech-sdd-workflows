@@ -34,6 +34,7 @@ import { present } from './phases/present';
 import { specify, SpecifyError } from './phases/specify';
 import { readStatus } from './spec-files';
 import { createReadlineUI, UI } from './ui';
+import { coloursEnabled, makePalette } from './colour';
 
 export interface MainOptions {
   /** Target repo root the whole run operates on. */
@@ -56,8 +57,10 @@ type StartPhase = 'specify' | 'plan' | 'implement';
 export async function main(options: MainOptions): Promise<number> {
   const { repoRoot, ui } = options;
   const out = options.out ?? ((line: string) => console.log(line));
+  const progressPalette = makePalette(coloursEnabled(process.stderr));
   const onProgress =
-    options.onProgress ?? ((line: string) => process.stderr.write(`${line}\n`));
+    options.onProgress ??
+    ((line: string) => process.stderr.write(`${progressPalette.agent(line)}\n`));
 
   try {
     // Ping first: resolveConfig pings Ollama as soon as the base URL is

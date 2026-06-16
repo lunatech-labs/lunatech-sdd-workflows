@@ -28,16 +28,17 @@ describe('createReadlineUI.readAnswer', () => {
     const { ui, input, getOutput } = makeUI();
     const promise = ui.readAnswer('What should the feature do?');
     await waitFor(() => getOutput().includes('you> '), 'the you> marker');
-    // Blank line, then the message on its own line, then the marker.
+    // The message sits on its own line immediately above the marker.
     expect(getOutput()).toContain('\nWhat should the feature do?\nyou> ');
-    input.write('Make it fast.\n\n');
+    // A "." on its own line submits.
+    input.write('Make it fast.\n.\n');
     expect(await promise).toBe('Make it fast.');
   });
 
   test('marks continuation lines with "...> "', async () => {
     const { ui, input, getOutput } = makeUI();
     const promise = ui.readAnswer('Question?');
-    input.write('first\nsecond\nthird\n\n');
+    input.write('first\nsecond\nthird\n.\n');
     expect(await promise).toBe('first\nsecond\nthird');
     // One "you> " for the first line, then "...> " after every accepted line.
     expect(getOutput().match(/you> /g)).toHaveLength(1);
@@ -46,9 +47,9 @@ describe('createReadlineUI.readAnswer', () => {
 
   test('a 5-line paste arrives verbatim as ONE string, and no residue leaks into a later prompt', async () => {
     const { ui, input } = makeUI();
-    // Pre-write the whole paste (plus the submitting empty line) as a single
+    // Pre-write the whole paste plus the submitting "." line as a single
     // chunk, the way a terminal paste lands in stdin.
-    input.write('l1\nl2\nl3\nl4\nl5\n\n');
+    input.write('l1\nl2\nl3\nl4\nl5\n.\n');
     const answer = await ui.readAnswer('Paste your notes.');
     expect(answer).toBe('l1\nl2\nl3\nl4\nl5');
 
@@ -58,21 +59,35 @@ describe('createReadlineUI.readAnswer', () => {
     expect(await askPromise).toBe('fresh input');
   });
 
+  test('keeps blank lines that sit between content (paste survives intact)', async () => {
+    const { ui, input } = makeUI();
+    const promise = ui.readAnswer('Question?');
+    input.write('para 1\n\npara 2\n.\n');
+    expect(await promise).toBe('para 1\n\npara 2');
+  });
+
+  test('drops trailing blank lines (e.g. a paste ending in newlines)', async () => {
+    const { ui, input } = makeUI();
+    const promise = ui.readAnswer('Question?');
+    input.write('content\n\n\n.\n');
+    expect(await promise).toBe('content');
+  });
+
   test('keeps lines verbatim: surrounding whitespace is not trimmed', async () => {
     const { ui, input } = makeUI();
     const promise = ui.readAnswer('Question?');
-    input.write('  indented\ttext  \n\n');
+    input.write('  indented\ttext  \n.\n');
     expect(await promise).toBe('  indented\ttext  ');
   });
 
-  test('an empty first line returns the empty string', async () => {
+  test('submitting immediately (a lone ".") returns the empty string', async () => {
     const { ui, input } = makeUI();
     const promise = ui.readAnswer('Question?');
-    input.write('\n');
+    input.write('.\n');
     expect(await promise).toBe('');
   });
 
-  test('end of input submits whatever was collected', async () => {
+  test('end of input (Ctrl-D) submits whatever was collected', async () => {
     const { ui, input } = makeUI();
     const promise = ui.readAnswer('Question?');
     input.write('only line\n');

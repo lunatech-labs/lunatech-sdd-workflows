@@ -6,6 +6,7 @@
  * substitute scripted answers without a TTY.
  */
 import * as readline from 'node:readline/promises';
+import { coloursEnabled, makePalette } from './colour';
 
 export interface UI {
   /** Ask a free-form question and return the trimmed answer. */
@@ -15,10 +16,13 @@ export interface UI {
   /** Present a numbered list of options and return the chosen option. */
   select(label: string, options: string[]): Promise<string>;
   /**
-   * Print the message as output (blank line above), then read a multi-line
-   * answer behind a "you> " marker ("...> " on continuation lines). An empty
-   * line submits; the lines are returned verbatim, joined with newlines, with
-   * the terminating empty line dropped.
+   * Print the message as an agent block (a hint and the message, blank line
+   * above), then read a multi-line answer behind a "you> " marker ("...> " on
+   * continuation lines). Every line is kept verbatim, INCLUDING blank lines,
+   * so pasted content with internal blank lines survives intact. The answer is
+   * submitted with Ctrl-D (EOF) or a line containing only "." — a blank line is
+   * no longer a submit. Lines are returned joined with newlines, with trailing
+   * blank lines dropped.
    */
   readAnswer(message: string): Promise<string>;
 }
@@ -74,8 +78,16 @@ export function createReadlineUI(
     }
   };
 
+  const palette = makePalette(coloursEnabled(output));
+  // A line containing only this submits the answer (the typeable equivalent of
+  // Ctrl-D). A bare blank line is NOT a submit, so pasted blank lines survive.
+  const SUBMIT_SENTINEL = '.';
+
   const readAnswer = (message: string): Promise<string> => {
-    output.write(`\n${message}\n`);
+    output.write(
+      `\n${palette.hint('(line breaks are kept — submit with Ctrl-D, or a "." on its own line)')}\n`,
+    );
+    output.write(`${palette.agent(message)}\n`);
     // One interface for the entire answer: rl.question-per-line would let a
     // multi-line paste emit lines while no listener is attached, dropping or
     // misrouting everything after the first line.
@@ -87,21 +99,26 @@ export function createReadlineUI(
         if (done) return;
         done = true;
         rl.close();
+        // Drop trailing blank lines (e.g. a paste's trailing newline) but keep
+        // blank lines that sit between content.
+        while (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
         resolve(lines.join('\n'));
       };
-      rl.setPrompt('you> ');
-      rl.prompt();
+      const prompt = (marker: string): void => {
+        rl.setPrompt(palette.user(marker));
+        rl.prompt();
+      };
+      prompt('you> ');
       rl.on('line', line => {
         if (done) return;
-        if (line === '') {
+        if (line === SUBMIT_SENTINEL) {
           finish();
           return;
         }
-        lines.push(line);
-        rl.setPrompt('...> ');
-        rl.prompt();
+        lines.push(line); // every line, including blanks, is content
+        prompt('...> ');
       });
-      // EOF (e.g. ctrl-D) submits whatever was collected so far.
+      // EOF (Ctrl-D) submits whatever was collected so far.
       rl.on('close', finish);
     });
   };
