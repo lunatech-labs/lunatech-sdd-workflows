@@ -52,6 +52,9 @@ cp -r spec-swarm/commands/* your-repo/.claude/commands/
 Or just describe a feature — the skill offers itself for anything bigger
 than ~30 minutes of work.
 
+Not sure whether a change is worth the full pipeline? See
+[When to use the SDD pipeline vs. make changes directly](docs/guidelines-sdd-vs-direct-edits.md).
+
 ## What lives where
 
 | Path | Role |
@@ -63,8 +66,35 @@ than ~30 minutes of work.
 | `agents/sdd-critic.md` | independent PASS/FAIL/DRIFT verification |
 | `commands/sdd.md` | `/sdd` entry point |
 
-Per-project state lives in the target repo under `specs/NNN-slug/`
-(spec.md, plan.md, journal.md) — the plugin itself stays project-agnostic.
+Per-project state lives under `specs/NNN-slug/` (spec.md, plan.md,
+journal.md) — the plugin itself stays project-agnostic.
+
+The `specs/` folder is written **relative to the directory your Claude Code
+session is running in**, not inside the plugin. So if you launch Claude Code
+from `~/code/my-app` and run `/sdd add CSV export`, the spec lands at:
+
+```
+~/code/my-app/specs/001-add-csv-export/
+├── spec.md
+├── plan.md
+└── journal.md
+```
+
+Run the session from a different repo and the `specs/` folder follows you
+there.
+
+Each new `/sdd` run creates its own sequentially numbered folder
+(`001-`, `002-`, `003-`, …) rather than overwriting the last one. Over time
+`specs/` becomes an ordered record of the work — each folder a self-contained
+contract, plan, and journal — giving you visibility into how the project has
+evolved:
+
+```
+~/code/my-app/specs/
+├── 001-add-csv-export/
+├── 002-bracketed-paste-support/
+└── 003-spec-critic-lint/
+```
 
 ## Design notes
 
@@ -79,11 +109,3 @@ Per-project state lives in the target repo under `specs/NNN-slug/`
 - **Parallel-ready.** Tasks carry `depends_on:` so independent tasks can
   later run in parallel worktrees; execution is sequential for now.
 
-## Roadmap
-
-- **Local-LLM version.** Eventually this workflow should run fully locally
-  against locally hosted models (e.g. Ollama, as in swarm-kg) via a
-  standalone orchestrator. To keep that door open, the role prompts
-  (planner/implementer/critic), spec template, and phase logic are plain
-  markdown — portable to any runtime. Claude Code-specific glue (agent
-  frontmatter, `/sdd` command, Task-tool dispatch) stays thin and replaceable.
