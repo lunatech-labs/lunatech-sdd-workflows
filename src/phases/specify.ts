@@ -26,7 +26,7 @@ import { promises as fs } from 'node:fs';
 import * as path from 'node:path';
 import { runAgent } from '../agent-loop';
 import { loadPrompt, loadSpecTemplate } from '../prompts';
-import { writeStatus } from '../spec-files';
+import { appendJournal, writeStatus } from '../spec-files';
 import { createToolRegistry, ToolRegistry } from '../tools/registry';
 import { resolveInRepo } from '../tools/sandbox';
 import type { UI } from '../ui';
@@ -278,11 +278,39 @@ export async function specify(options: SpecifyOptions): Promise<SpecifyResult> {
   for (;;) {
     const specPath = await interviewUntilValid(dispatch, context);
     const relPath = path.relative(repoRoot, specPath);
+    const journalPath = path.join(path.dirname(specPath), 'journal.md');
 
-    const choice = await ui.select(
-      `Gate 1: a draft spec was saved at ${relPath}. Review it, then choose:`,
-      [GATE1_APPROVE, GATE1_REQUEST_CHANGES, GATE1_ABORT],
-    );
+    // Gate 1 REQUIRES one of approve/request-changes/abort to branch on. Per
+    // the resolved Q1 decision (and matching the drift gate in implement.ts) a
+    // free-text escape ("Something else...") is treated as a note rather than a
+    // fourth decision: we carry that text as a pending note and re-prompt until
+    // the user picks one of the three options, so their input is never dropped
+    // and the branch mapping below stays byte-identical.
+    let note: string | undefined;
+    let choice: string;
+    for (;;) {
+      const result = await ui.choose(
+        `Gate 1: a draft spec was saved at ${relPath}. Review it, then choose:`,
+        [GATE1_APPROVE, GATE1_REQUEST_CHANGES, GATE1_ABORT],
+      );
+      if ('freeText' in result) {
+        note = result.freeText;
+        continue;
+      }
+      choice = result.option;
+      if (result.note !== undefined) note = result.note;
+      break;
+    }
+
+    // Per the resolved Q3 decision, an attached note is journaled on ANY branch
+    // (approve, request-changes, abort) when one is present. This is a NEW
+    // journal write: Gate 1 does not journal today.
+    if (note !== undefined) {
+      await appendJournal(
+        journalPath,
+        `Gate 1 (${relPath}): user chose "${choice}" with note: ${note}`,
+      );
+    }
 
     if (choice === GATE1_APPROVE) {
       await writeStatus(specPath, 'SPECIFIED');
@@ -292,7 +320,11 @@ export async function specify(options: SpecifyOptions): Promise<SpecifyResult> {
       return { outcome: 'aborted' };
     }
 
-    const feedback = await ui.ask(FEEDBACK_QUESTION);
+    // The request-changes branch consumes feedback. When a note (or carried
+    // free text) is attached, it IS the feedback and the separate follow-up is
+    // skipped; with no note, the follow-up question runs as before (AC8).
+    const feedback =
+      note !== undefined && note !== '' ? note : await ui.ask(FEEDBACK_QUESTION);
     context = [
       base,
       '',

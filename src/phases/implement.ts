@@ -227,10 +227,34 @@ export async function implement(options: ImplementOptions): Promise<ImplementRes
       '',
       'How should we proceed?',
     ].join('\n');
-    const choice = await ui.select(label, [DRIFT_CONTINUE, DRIFT_AMEND, DRIFT_ABORT]);
+    // The drift gate REQUIRES one of continue/amend/abort, so it has no
+    // request-changes/free-text decision path. Per the resolved Q1 decision a
+    // free-text escape ("Something else...") is treated as a note rather than a
+    // fourth decision: we carry that text as a pending note and re-prompt until
+    // the user picks one of the three options, so their input is never dropped
+    // and the continue/amend/abort mapping stays byte-identical.
+    let note: string | undefined;
+    let choice: string;
+    for (;;) {
+      const result = await ui.choose(label, [DRIFT_CONTINUE, DRIFT_AMEND, DRIFT_ABORT]);
+      if ('freeText' in result) {
+        note = result.freeText;
+        continue;
+      }
+      choice = result.option;
+      if (result.note !== undefined) note = result.note;
+      break;
+    }
     const decision =
       choice === DRIFT_CONTINUE ? 'continue' : choice === DRIFT_AMEND ? 'amend' : 'abort';
-    await appendJournal(journalPath, `${taskId}: user decision on the drift: ${decision}`);
+    // Fold any attached note into the existing user-decision journal entry, so
+    // the note is recorded at the point the gate already journals (AC5). No
+    // separate appendJournal call is added.
+    const decisionEntry =
+      note === undefined
+        ? `${taskId}: user decision on the drift: ${decision}`
+        : `${taskId}: user decision on the drift: ${decision}\n\nNote: ${note}`;
+    await appendJournal(journalPath, decisionEntry);
     return decision;
   };
 

@@ -14,24 +14,32 @@ import {
   VALIDATION_RETRY_CAP,
 } from '../src/phases/specify';
 import type { ChatMessage } from '../src/ollama';
-import type { UI } from '../src/ui';
+import type { ChoiceResult, UI } from '../src/ui';
 
 /** UI with scripted answers that records every prompt it was shown. */
 interface ScriptedUI extends UI {
   asked: string[];
   selected: Array<{ label: string; options: string[] }>;
+  chosen: Array<{ label: string; options: string[] }>;
   readAnswered: string[];
 }
 
 function scriptedUI(
-  script: { asks?: string[]; selects?: string[]; readAnswers?: string[] } = {},
+  script: {
+    asks?: string[];
+    selects?: string[];
+    chooses?: ChoiceResult[];
+    readAnswers?: string[];
+  } = {},
 ): ScriptedUI {
   const asks = [...(script.asks ?? [])];
   const selects = [...(script.selects ?? [])];
+  const chooses = [...(script.chooses ?? [])];
   const readAnswers = [...(script.readAnswers ?? [])];
   const ui: ScriptedUI = {
     asked: [],
     selected: [],
+    chosen: [],
     readAnswered: [],
     async ask(question) {
       ui.asked.push(question);
@@ -47,6 +55,15 @@ function scriptedUI(
       const answer = selects.shift();
       if (answer === undefined) throw new Error('scriptedUI: no scripted select answer left');
       return answer;
+    },
+    async choose(label, options) {
+      ui.chosen.push({ label, options });
+      const answer = chooses.shift();
+      if (answer === undefined) throw new Error('scriptedUI: no scripted choose answer left');
+      return answer;
+    },
+    async confirmWithNote() {
+      throw new Error('scriptedUI: confirmWithNote is not scripted');
     },
     async readAnswer(message) {
       ui.readAnswered.push(message);
@@ -195,7 +212,7 @@ describe('specify phase and Gate 1', () => {
     const ui = scriptedUI({
       asks: ['Build a demo feature.'],
       readAnswers: ['Testing the SPECIFY phase.'],
-      selects: [GATE1_APPROVE],
+      chooses: [{ option: GATE1_APPROVE }],
     });
 
     const result = await specify(options(ui));
@@ -219,10 +236,10 @@ describe('specify phase and Gate 1', () => {
     expect(ui.readAnswered).toEqual(['What is the mission of this feature?']);
 
     // The phase stopped at Gate 1 and offered the three choices.
-    expect(ui.selected).toHaveLength(1);
-    expect(ui.selected[0].label).toContain('Gate 1');
-    expect(ui.selected[0].label).toContain(SPEC_REL_PATH);
-    expect(ui.selected[0].options).toEqual([GATE1_APPROVE, GATE1_REQUEST_CHANGES, GATE1_ABORT]);
+    expect(ui.chosen).toHaveLength(1);
+    expect(ui.chosen[0].label).toContain('Gate 1');
+    expect(ui.chosen[0].label).toContain(SPEC_REL_PATH);
+    expect(ui.chosen[0].options).toEqual([GATE1_APPROVE, GATE1_REQUEST_CHANGES, GATE1_ABORT]);
 
     // The dispatch context carried the opening request and the vendored
     // template content (the template is context, not a sandbox file).
@@ -235,7 +252,7 @@ describe('specify phase and Gate 1', () => {
 
   test('Gate 1 abort leaves the spec DRAFT, section 6 empty, and no plan.md (AC5 part)', async () => {
     mock.script(writeAndReport(draftSpec()));
-    const ui = scriptedUI({ asks: ['Build a demo feature.'], selects: [GATE1_ABORT] });
+    const ui = scriptedUI({ asks: ['Build a demo feature.'], chooses: [{ option: GATE1_ABORT }] });
 
     const result = await specify(options(ui));
 
@@ -260,7 +277,7 @@ describe('specify phase and Gate 1', () => {
     ]);
     const ui = scriptedUI({
       asks: ['Build a demo feature.', 'Please mention logging in the mission.'],
-      selects: [GATE1_REQUEST_CHANGES, GATE1_APPROVE],
+      chooses: [{ option: GATE1_REQUEST_CHANGES }, { option: GATE1_APPROVE }],
     });
 
     const result = await specify(options(ui));
@@ -278,7 +295,7 @@ describe('specify phase and Gate 1', () => {
     expect(redispatchContext.content).toContain('Please mention logging in the mission.');
 
     // Gate 1 was consulted twice: reject, then approve.
-    expect(ui.selected).toHaveLength(2);
+    expect(ui.chosen).toHaveLength(2);
   });
 
   test('an invalid draft re-prompts the supervisor with the validation errors', async () => {
@@ -289,7 +306,7 @@ describe('specify phase and Gate 1', () => {
       ...writeAndReport(invalid),
       ...writeAndReport(draftSpec(), 'failed validation'),
     ]);
-    const ui = scriptedUI({ asks: ['Build a demo feature.'], selects: [GATE1_APPROVE] });
+    const ui = scriptedUI({ asks: ['Build a demo feature.'], chooses: [{ option: GATE1_APPROVE }] });
 
     const result = await specify(options(ui));
 
@@ -300,7 +317,7 @@ describe('specify phase and Gate 1', () => {
     expect(redispatchContext.content).toContain('section 6 must be empty');
 
     // Gate 1 was only reached once, with the valid draft.
-    expect(ui.selected).toHaveLength(1);
+    expect(ui.chosen).toHaveLength(1);
   });
 
   test('a report naming a file that was never written re-prompts the supervisor', async () => {
@@ -308,7 +325,7 @@ describe('specify phase and Gate 1', () => {
       { tool_calls: [call('report', { spec_path: SPEC_REL_PATH })] },
       ...writeAndReport(draftSpec(), 'does not exist'),
     ]);
-    const ui = scriptedUI({ asks: ['Build a demo feature.'], selects: [GATE1_APPROVE] });
+    const ui = scriptedUI({ asks: ['Build a demo feature.'], chooses: [{ option: GATE1_APPROVE }] });
 
     const result = await specify(options(ui));
 
@@ -331,6 +348,106 @@ describe('specify phase and Gate 1', () => {
     expect(error.message).toContain('section 2');
     // Every dispatch was consumed; Gate 1 was never reached.
     expect(mock.pendingReplies).toBe(0);
-    expect(ui.selected).toHaveLength(0);
+    expect(ui.chosen).toHaveLength(0);
+  });
+
+  test('Gate 1 approve WITH a note proceeds to SPECIFIED exactly as without a note, and journals the note (AC6)', async () => {
+    mock.script(writeAndReport(draftSpec()));
+    const ui = scriptedUI({
+      asks: ['Build a demo feature.'],
+      chooses: [{ option: GATE1_APPROVE, note: 'looks good, ship it' }],
+    });
+
+    const result = await specify(options(ui));
+
+    // The approve branch is unchanged: same approved outcome, status flip.
+    expect(result).toEqual({
+      outcome: 'approved',
+      specPath: path.join(repo.root, SPEC_REL_PATH),
+    });
+    const saved = await repo.readFile(SPEC_REL_PATH);
+    expect(saved).toContain('> Status: SPECIFIED');
+
+    // The attached note was journaled to journal.md in the spec folder.
+    const journal = await repo.readFile('specs/001-demo/journal.md');
+    expect(journal).toContain(`Gate 1 (${SPEC_REL_PATH}): user chose "${GATE1_APPROVE}"`);
+    expect(journal).toContain('looks good, ship it');
+  });
+
+  test('Gate 1 abort WITH a note still aborts, and journals the note (AC6)', async () => {
+    mock.script(writeAndReport(draftSpec()));
+    const ui = scriptedUI({
+      asks: ['Build a demo feature.'],
+      chooses: [{ option: GATE1_ABORT, note: 'changed my mind' }],
+    });
+
+    const result = await specify(options(ui));
+
+    // The abort branch is unchanged: aborted outcome, no status flip.
+    expect(result).toEqual({ outcome: 'aborted' });
+    const saved = await repo.readFile(SPEC_REL_PATH);
+    expect(saved).toContain('> Status: DRAFT');
+
+    // The note was journaled even on the abort branch (resolved Q3).
+    const journal = await repo.readFile('specs/001-demo/journal.md');
+    expect(journal).toContain(`Gate 1 (${SPEC_REL_PATH}): user chose "${GATE1_ABORT}"`);
+    expect(journal).toContain('changed my mind');
+  });
+
+  test('Gate 1 request-changes WITH a note uses the note as feedback and SKIPS the follow-up (AC8)', async () => {
+    const revised = draftSpec({ mission: 'Build a demo feature, now with logging.' });
+    mock.script([
+      ...writeAndReport(draftSpec()),
+      ...writeAndReport(revised, 'Gate 1 feedback'),
+    ]);
+    const ui = scriptedUI({
+      // T8: a note attached to request-changes IS the feedback, so the
+      // FEEDBACK_QUESTION follow-up is not asked. The opening request is the
+      // only ask scripted; no follow-up answer is provided.
+      asks: ['Build a demo feature.'],
+      chooses: [{ option: GATE1_REQUEST_CHANGES, note: 'needs logging' }, { option: GATE1_APPROVE }],
+    });
+
+    const result = await specify(options(ui));
+
+    // The branch behaviour is unchanged (it re-entered the interview), but the
+    // follow-up question was NOT asked: only the opening request reached ask.
+    expect(result.outcome).toBe('approved');
+    expect(ui.asked).not.toContain('What should change in the spec?');
+    expect(ui.asked).toEqual([expect.stringContaining('Describe the feature')]);
+
+    // The note drove the re-dispatch context as the feedback.
+    const redispatchContext = chatMessages(2)[1];
+    expect(redispatchContext.content).toContain('Gate 1 feedback');
+    expect(redispatchContext.content).toContain('needs logging');
+
+    const saved = await repo.readFile(SPEC_REL_PATH);
+    expect(saved).toContain('now with logging');
+
+    // The note from the first (request-changes) choice was journaled.
+    const journal = await repo.readFile('specs/001-demo/journal.md');
+    expect(journal).toContain(`Gate 1 (${SPEC_REL_PATH}): user chose "${GATE1_REQUEST_CHANGES}"`);
+    expect(journal).toContain('needs logging');
+  });
+
+  test('Gate 1 request-changes WITHOUT a note still asks the follow-up question (AC8)', async () => {
+    const revised = draftSpec({ mission: 'Build a demo feature, now with logging.' });
+    mock.script([
+      ...writeAndReport(draftSpec()),
+      ...writeAndReport(revised, 'Gate 1 feedback'),
+    ]);
+    const ui = scriptedUI({
+      asks: ['Build a demo feature.', 'Please mention logging in the mission.'],
+      chooses: [{ option: GATE1_REQUEST_CHANGES }, { option: GATE1_APPROVE }],
+    });
+
+    const result = await specify(options(ui));
+
+    // With no note, the follow-up question is asked and its answer is the
+    // feedback that drives the re-dispatch.
+    expect(result.outcome).toBe('approved');
+    expect(ui.asked).toContain('What should change in the spec?');
+    const redispatchContext = chatMessages(2)[1];
+    expect(redispatchContext.content).toContain('Please mention logging in the mission.');
   });
 });

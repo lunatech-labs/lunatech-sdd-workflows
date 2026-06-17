@@ -31,6 +31,7 @@ import * as path from 'node:path';
 import { runAgent } from '../agent-loop';
 import { loadPrompt } from '../prompts';
 import {
+  appendJournal,
   assertSection7AppendOnly,
   assertSections1to5Unchanged,
   parseTasksFromContent,
@@ -237,6 +238,7 @@ export async function plan(options: PlanOptions): Promise<PlanResult> {
   const systemPrompt = loadPrompt('planner');
   const tools = createToolRegistry({ repoRoot, role: 'planner', ui });
   const planPath = path.join(path.dirname(specPath), 'plan.md');
+  const journalPath = path.join(path.dirname(specPath), 'journal.md');
   const specRelPath = path.relative(repoRoot, specPath);
   const planRelPath = path.relative(repoRoot, planPath);
 
@@ -266,11 +268,38 @@ export async function plan(options: PlanOptions): Promise<PlanResult> {
     const summary = report.summary as string;
     const gateNotes = typeof report.gate_notes === 'string' ? report.gate_notes : undefined;
 
-    const choice = await ui.select(gateLabel(planRelPath, summary, tasks, gateNotes), [
-      GATE2_APPROVE,
-      GATE2_REQUEST_CHANGES,
-      GATE2_ABORT,
-    ]);
+    // Gate 2 REQUIRES one of approve/request-changes/abort to branch on. Per
+    // the resolved Q1 decision (and matching Gate 1 in specify.ts) a free-text
+    // escape ("Something else...") is treated as a note rather than a fourth
+    // decision: we carry that text as a pending note and re-prompt until the
+    // user picks one of the three options, so their input is never dropped and
+    // the branch mapping below stays byte-identical.
+    let note: string | undefined;
+    let choice: string;
+    for (;;) {
+      const result = await ui.choose(gateLabel(planRelPath, summary, tasks, gateNotes), [
+        GATE2_APPROVE,
+        GATE2_REQUEST_CHANGES,
+        GATE2_ABORT,
+      ]);
+      if ('freeText' in result) {
+        note = result.freeText;
+        continue;
+      }
+      choice = result.option;
+      if (result.note !== undefined) note = result.note;
+      break;
+    }
+
+    // Per the resolved Q3 decision, an attached note is journaled on ANY branch
+    // (approve, request-changes, abort) when one is present. This is a NEW
+    // journal write: Gate 2 does not journal today.
+    if (note !== undefined) {
+      await appendJournal(
+        journalPath,
+        `Gate 2 (${planRelPath}): user chose "${choice}" with note: ${note}`,
+      );
+    }
 
     if (choice === GATE2_APPROVE) {
       await writeStatus(specPath, 'PLANNED');
@@ -279,6 +308,10 @@ export async function plan(options: PlanOptions): Promise<PlanResult> {
     if (choice === GATE2_ABORT) {
       return { outcome: 'aborted' };
     }
-    feedback = await ui.ask(FEEDBACK_QUESTION);
+    // The request-changes branch consumes feedback. When a note (or carried
+    // free text) is attached, it IS the feedback and the separate follow-up is
+    // skipped; with no note, the follow-up question runs as before (AC8).
+    feedback =
+      note !== undefined && note !== '' ? note : await ui.ask(FEEDBACK_QUESTION);
   }
 }

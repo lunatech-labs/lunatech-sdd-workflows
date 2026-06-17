@@ -15,25 +15,33 @@ import { main } from '../src/index';
 import { GATE1_APPROVE, GATE1_ABORT } from '../src/phases/specify';
 import { GATE2_APPROVE, GATE2_ABORT } from '../src/phases/plan';
 import type { ChatMessage } from '../src/ollama';
-import type { UI } from '../src/ui';
+import type { ChoiceResult, UI } from '../src/ui';
 
 /** UI with scripted answers that records every prompt it was shown. */
 interface ScriptedUI extends UI {
   asked: string[];
   confirmed: string[];
   selected: Array<{ label: string; options: string[] }>;
+  chosen: Array<{ label: string; options: string[] }>;
 }
 
 function scriptedUI(
-  script: { asks?: string[]; confirms?: boolean[]; selects?: string[] } = {},
+  script: {
+    asks?: string[];
+    confirms?: boolean[];
+    selects?: string[];
+    chooses?: ChoiceResult[];
+  } = {},
 ): ScriptedUI {
   const asks = [...(script.asks ?? [])];
   const confirms = [...(script.confirms ?? [])];
   const selects = [...(script.selects ?? [])];
+  const chooses = [...(script.chooses ?? [])];
   const ui: ScriptedUI = {
     asked: [],
     confirmed: [],
     selected: [],
+    chosen: [],
     async ask(question) {
       ui.asked.push(question);
       const answer = asks.shift();
@@ -54,6 +62,15 @@ function scriptedUI(
     },
     async readAnswer(message) {
       throw new Error(`scriptedUI: unscripted readAnswer: ${message}`);
+    },
+    async choose(label, options) {
+      ui.chosen.push({ label, options });
+      const answer = chooses.shift();
+      if (answer === undefined) throw new Error(`scriptedUI: unscripted choose: ${label}`);
+      return answer;
+    },
+    async confirmWithNote(question) {
+      throw new Error(`scriptedUI: unscripted confirmWithNote: ${question}`);
     },
   };
   return ui;
@@ -252,7 +269,7 @@ describe('end-to-end phase machine', () => {
     ]);
     const ui = scriptedUI({
       asks: ['Build a demo feature.'],
-      selects: [GATE1_APPROVE, GATE2_APPROVE],
+      chooses: [{ option: GATE1_APPROVE }, { option: GATE2_APPROVE }],
     });
     const lines: string[] = [];
 
@@ -262,9 +279,9 @@ describe('end-to-end phase machine', () => {
     expect(mock.pendingReplies).toBe(0);
 
     // Both gates were offered, in order.
-    expect(ui.selected).toHaveLength(2);
-    expect(ui.selected[0].label).toContain('Gate 1');
-    expect(ui.selected[1].label).toContain('Gate 2');
+    expect(ui.chosen).toHaveLength(2);
+    expect(ui.chosen[0].label).toContain('Gate 1');
+    expect(ui.chosen[1].label).toContain('Gate 2');
 
     // All artifacts exist; tasks ticked; status DONE (set by PRESENT).
     const spec = await repo!.readFile(SPEC_REL_PATH);
@@ -293,7 +310,7 @@ describe('end-to-end phase machine', () => {
     mock.script(supervisorScript());
     const ui = scriptedUI({
       asks: ['Build a demo feature.'],
-      selects: [GATE1_ABORT],
+      chooses: [{ option: GATE1_ABORT }],
     });
     const lines: string[] = [];
 
@@ -321,7 +338,7 @@ describe('end-to-end phase machine', () => {
     mock.script([...supervisorScript(), ...plannerScript()]);
     const ui = scriptedUI({
       asks: ['Build a demo feature.'],
-      selects: [GATE1_APPROVE, GATE2_ABORT],
+      chooses: [{ option: GATE1_APPROVE }, { option: GATE2_ABORT }],
     });
     const lines: string[] = [];
 
@@ -386,6 +403,7 @@ describe('end-to-end phase machine', () => {
     // No interview, no gates, no agent dispatches.
     expect(ui.asked).toHaveLength(0);
     expect(ui.selected).toHaveLength(0);
+    expect(ui.chosen).toHaveLength(0);
     expect(mock.chatRequests).toHaveLength(0);
   });
 });

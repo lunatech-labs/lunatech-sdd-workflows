@@ -67,7 +67,7 @@ export async function main(options: MainOptions): Promise<number> {
     // known and throws ConfigError when it is unreachable (AC9).
     const config = await resolveConfig({ repoRoot, ui, warn: out });
 
-    if (!(await gitSafetyCheck(repoRoot, (question) => ui.confirm(question)))) {
+    if (!(await gitSafetyCheck(repoRoot, (question) => ui.confirmWithNote(question)))) {
       out('Stopped: the git safety warning was declined. Nothing was changed.');
       return 0;
     }

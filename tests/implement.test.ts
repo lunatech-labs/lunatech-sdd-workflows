@@ -11,20 +11,25 @@ import {
   DRIFT_ABORT,
 } from '../src/phases/implement';
 import type { ChatMessage } from '../src/ollama';
-import type { UI } from '../src/ui';
+import type { ChoiceResult, UI } from '../src/ui';
 
 /** UI with scripted answers that records every prompt it was shown. */
 interface ScriptedUI extends UI {
   asked: string[];
   selected: Array<{ label: string; options: string[] }>;
+  chosen: Array<{ label: string; options: string[] }>;
 }
 
-function scriptedUI(script: { asks?: string[]; selects?: string[] } = {}): ScriptedUI {
+function scriptedUI(
+  script: { asks?: string[]; selects?: string[]; chooses?: ChoiceResult[] } = {},
+): ScriptedUI {
   const asks = [...(script.asks ?? [])];
   const selects = [...(script.selects ?? [])];
+  const chooses = [...(script.chooses ?? [])];
   const ui: ScriptedUI = {
     asked: [],
     selected: [],
+    chosen: [],
     async ask(question) {
       ui.asked.push(question);
       const answer = asks.shift();
@@ -42,6 +47,15 @@ function scriptedUI(script: { asks?: string[]; selects?: string[] } = {}): Scrip
     },
     async readAnswer() {
       throw new Error('scriptedUI: readAnswer is not scripted');
+    },
+    async choose(label, options) {
+      ui.chosen.push({ label, options });
+      const answer = chooses.shift();
+      if (answer === undefined) throw new Error('scriptedUI: no scripted choose answer left');
+      return answer;
+    },
+    async confirmWithNote() {
+      throw new Error('scriptedUI: confirmWithNote is not scripted');
     },
   };
   return ui;
@@ -233,7 +247,7 @@ describe('implement loop', () => {
     expect(progress).toContain('Task T2: critic PASS, checkbox ticked.');
 
     // No drift prompts, no gates: the UI was never consulted.
-    expect(ui.selected).toHaveLength(0);
+    expect(ui.chosen).toHaveLength(0);
   });
 
   test('already-checked tasks are skipped: the loop resumes from the first unchecked task', async () => {
@@ -321,7 +335,7 @@ describe('implement loop', () => {
     expect(progress.join('\n')).toContain('attempt 3 failure: tests fail for the third time.');
 
     // Escalation is a stop, not a drift decision: no UI prompt.
-    expect(ui.selected).toHaveLength(0);
+    expect(ui.chosen).toHaveLength(0);
   });
 
   test('implementer DRIFT halts the loop and journals before the user prompt; abort stops (AC12)', async () => {
@@ -331,14 +345,14 @@ describe('implement loop', () => {
         details: 'The plan names a file that the spec forbids.',
       }),
     ]);
-    const ui = scriptedUI({ selects: [DRIFT_ABORT] });
+    const ui = scriptedUI({ chooses: [{ option: DRIFT_ABORT }] });
 
     // Capture journal.md as it stood the moment the user was prompted.
     let journalAtPrompt: string | null = null;
-    const baseSelect = ui.select.bind(ui);
-    ui.select = async (label, opts) => {
+    const baseChoose = ui.choose.bind(ui);
+    ui.choose = async (label, opts) => {
       journalAtPrompt = await journal().catch(() => '');
-      return baseSelect(label, opts);
+      return baseChoose(label, opts);
     };
 
     const result = await implement(options(ui));
@@ -356,10 +370,10 @@ describe('implement loop', () => {
     expect(journalAtPrompt).toContain('The plan names a file that the spec forbids.');
 
     // The prompt showed the drift report and the three decisions.
-    expect(ui.selected).toHaveLength(1);
-    expect(ui.selected[0].label).toContain('DRIFT');
-    expect(ui.selected[0].label).toContain('The plan names a file that the spec forbids.');
-    expect(ui.selected[0].options).toEqual([DRIFT_CONTINUE, DRIFT_AMEND, DRIFT_ABORT]);
+    expect(ui.chosen).toHaveLength(1);
+    expect(ui.chosen[0].label).toContain('DRIFT');
+    expect(ui.chosen[0].label).toContain('The plan names a file that the spec forbids.');
+    expect(ui.chosen[0].options).toEqual([DRIFT_CONTINUE, DRIFT_AMEND, DRIFT_ABORT]);
 
     // The loop stopped before the critic: one chat request, nothing ticked.
     expect(mock.chatRequests).toHaveLength(1);
@@ -367,12 +381,87 @@ describe('implement loop', () => {
     expect(await journal()).toContain('T1: user decision on the drift: abort');
   });
 
+  test('drift decision with an attached note journals the note at the decision point, decision unchanged (AC5)', async () => {
+    mock.script([
+      implementerReport('T1', {
+        status: 'DRIFT',
+        details: 'The plan names a file that the spec forbids.',
+      }),
+    ]);
+    // The user picks the same abort decision, but attaches a note explaining why.
+    const ui = scriptedUI({
+      chooses: [{ option: DRIFT_ABORT, note: 'spec section 3 forbids that file' }],
+    });
+
+    const result = await implement(options(ui));
+
+    // The decision is exactly what it would be without the note: abort.
+    expect(result).toEqual({
+      outcome: 'drift',
+      taskId: 'T1',
+      reportedBy: 'implementer',
+      decision: 'abort',
+      details: 'The plan names a file that the spec forbids.',
+    });
+
+    // The note is folded into the existing user-decision journal entry, at the
+    // point the gate already journals (no separate entry is added).
+    const entries = await journal();
+    expect(entries).toContain('T1: user decision on the drift: abort');
+    expect(entries).toContain('Note: spec section 3 forbids that file');
+    // The note rides with the decision entry, not a new appendJournal call.
+    expect(entries).toContain(
+      'T1: user decision on the drift: abort\n\nNote: spec section 3 forbids that file',
+    );
+  });
+
+  test('drift gate freeText escape re-prompts, then accepts a valid decision carrying the free text as the note', async () => {
+    mock.script([
+      implementerReport('T1', {
+        status: 'DRIFT',
+        details: 'The plan names a file that the spec forbids.',
+      }),
+    ]);
+    // The user first picks "Something else..." (free text), which is not one of
+    // the three decisions; the gate re-prompts. On the second prompt they pick a
+    // valid option. The carried free text becomes the note on the decision.
+    const ui = scriptedUI({
+      chooses: [
+        { freeText: 'can we move the file instead?' },
+        { option: DRIFT_AMEND },
+      ],
+    });
+
+    const result = await implement(options(ui));
+
+    // The re-prompt produced exactly the valid decision, not a fourth/empty one.
+    expect(result).toEqual({
+      outcome: 'drift',
+      taskId: 'T1',
+      reportedBy: 'implementer',
+      decision: 'amend',
+      details: 'The plan names a file that the spec forbids.',
+    });
+
+    // The gate prompted twice (the free-text escape forced a re-prompt) over the
+    // same three decisions both times.
+    expect(ui.chosen).toHaveLength(2);
+    expect(ui.chosen[0].options).toEqual([DRIFT_CONTINUE, DRIFT_AMEND, DRIFT_ABORT]);
+    expect(ui.chosen[1].options).toEqual([DRIFT_CONTINUE, DRIFT_AMEND, DRIFT_ABORT]);
+
+    // The carried free text is recorded as the note on the decision entry.
+    const entries = await journal();
+    expect(entries).toContain(
+      'T1: user decision on the drift: amend\n\nNote: can we move the file instead?',
+    );
+  });
+
   test('critic DRIFT halts the loop, journals, and amend stops for spec/plan changes (AC12)', async () => {
     mock.script([
       implementerReport('T1'),
       criticVerdict('DRIFT', 'AC1 contradicts the plan for T1.'),
     ]);
-    const ui = scriptedUI({ selects: [DRIFT_AMEND] });
+    const ui = scriptedUI({ chooses: [{ option: DRIFT_AMEND }] });
 
     const result = await implement(options(ui));
 
@@ -400,7 +489,7 @@ describe('implement loop', () => {
       implementerReport('T2'),
       criticVerdict('PASS', 'T2 verified.'),
     ]);
-    const ui = scriptedUI({ selects: [DRIFT_CONTINUE] });
+    const ui = scriptedUI({ chooses: [{ option: DRIFT_CONTINUE }] });
 
     const result = await implement(options(ui));
 
@@ -429,7 +518,7 @@ describe('implement loop', () => {
       criticVerdict('DRIFT', 'Spec ambiguity on T1.'),
       criticVerdict('PASS', 'T1 verified per the spec as written.'),
     ]);
-    const ui = scriptedUI({ selects: [DRIFT_CONTINUE] });
+    const ui = scriptedUI({ chooses: [{ option: DRIFT_CONTINUE }] });
 
     const result = await implement(options(ui));
 

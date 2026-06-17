@@ -2,7 +2,7 @@ import { describe, test, expect, afterEach } from 'vitest';
 import { makeTempRepo, TempRepo } from './helpers/temp-repo';
 import { describeGitState, gitSafetyCheck } from '../src/git-check';
 import { orient, START_FRESH } from '../src/phases/orient';
-import type { UI } from '../src/ui';
+import type { ChoiceResult, UI } from '../src/ui';
 
 /**
  * Scripted UI: queued answers per method, every call recorded. Throws when a
@@ -10,13 +10,27 @@ import type { UI } from '../src/ui';
  * fail loudly if the code asks anything.
  */
 interface ScriptedUI extends UI {
-  calls: { method: 'ask' | 'confirm' | 'select'; prompt: string; options?: string[] }[];
+  calls: {
+    method: 'ask' | 'confirm' | 'select' | 'choose' | 'confirmWithNote';
+    prompt: string;
+    options?: string[];
+  }[];
 }
 
-function scriptedUI(script: { confirms?: boolean[]; selects?: string[]; asks?: string[] } = {}): ScriptedUI {
+function scriptedUI(
+  script: {
+    confirms?: boolean[];
+    selects?: string[];
+    asks?: string[];
+    confirmWithNotes?: { yes: boolean; note?: string }[];
+    chooses?: ChoiceResult[];
+  } = {},
+): ScriptedUI {
   const confirms = [...(script.confirms ?? [])];
   const selects = [...(script.selects ?? [])];
   const asks = [...(script.asks ?? [])];
+  const confirmWithNotes = [...(script.confirmWithNotes ?? [])];
+  const chooses = [...(script.chooses ?? [])];
   const calls: ScriptedUI['calls'] = [];
   return {
     calls,
@@ -40,6 +54,18 @@ function scriptedUI(script: { confirms?: boolean[]; selects?: string[]; asks?: s
     },
     async readAnswer(message) {
       throw new Error(`unscripted readAnswer: ${message}`);
+    },
+    async choose(label, options) {
+      calls.push({ method: 'choose', prompt: label, options });
+      const answer = chooses.shift();
+      if (answer === undefined) throw new Error(`unscripted choose: ${label}`);
+      return answer;
+    },
+    async confirmWithNote(question) {
+      calls.push({ method: 'confirmWithNote', prompt: question });
+      const answer = confirmWithNotes.shift();
+      if (answer === undefined) throw new Error(`unscripted confirmWithNote: ${question}`);
+      return answer;
     },
   };
 }
@@ -109,7 +135,7 @@ describe('git safety check (AC16)', () => {
     expect(await describeGitState(repo.root)).toBeNull();
 
     const ui = scriptedUI(); // no scripted confirms: any call would throw
-    await expect(gitSafetyCheck(repo.root, ui.confirm)).resolves.toBe(true);
+    await expect(gitSafetyCheck(repo.root, ui.confirmWithNote)).resolves.toBe(true);
     expect(ui.calls).toHaveLength(0);
   });
 
@@ -119,8 +145,8 @@ describe('git safety check (AC16)', () => {
 
     expect(await describeGitState(repo.root)).toMatch(/uncommitted changes/);
 
-    const ui = scriptedUI({ confirms: [false] });
-    await expect(gitSafetyCheck(repo.root, ui.confirm)).resolves.toBe(false);
+    const ui = scriptedUI({ confirmWithNotes: [{ yes: false }] });
+    await expect(gitSafetyCheck(repo.root, ui.confirmWithNote)).resolves.toBe(false);
     expect(ui.calls).toHaveLength(1);
     expect(ui.calls[0].prompt).toMatch(/uncommitted changes/);
   });
@@ -129,8 +155,17 @@ describe('git safety check (AC16)', () => {
     repo = await makeTempRepo({ git: true, commit: true, files: { 'a.txt': 'a\n' } });
     await repo.writeFile('a.txt', 'modified\n');
 
-    const ui = scriptedUI({ confirms: [true] });
-    await expect(gitSafetyCheck(repo.root, ui.confirm)).resolves.toBe(true);
+    const ui = scriptedUI({ confirmWithNotes: [{ yes: true }] });
+    await expect(gitSafetyCheck(repo.root, ui.confirmWithNote)).resolves.toBe(true);
+    expect(ui.calls).toHaveLength(1);
+  });
+
+  test('a yes with an attached note still proceeds (note does not change the outcome)', async () => {
+    repo = await makeTempRepo({ git: true, commit: true, files: { 'a.txt': 'a\n' } });
+    await repo.writeFile('a.txt', 'modified\n');
+
+    const ui = scriptedUI({ confirmWithNotes: [{ yes: true, note: 'rebuild first' }] });
+    await expect(gitSafetyCheck(repo.root, ui.confirmWithNote)).resolves.toBe(true);
     expect(ui.calls).toHaveLength(1);
   });
 
@@ -139,12 +174,12 @@ describe('git safety check (AC16)', () => {
 
     expect(await describeGitState(repo.root)).toMatch(/not a git repository/);
 
-    const denied = scriptedUI({ confirms: [false] });
-    await expect(gitSafetyCheck(repo.root, denied.confirm)).resolves.toBe(false);
+    const denied = scriptedUI({ confirmWithNotes: [{ yes: false }] });
+    await expect(gitSafetyCheck(repo.root, denied.confirmWithNote)).resolves.toBe(false);
     expect(denied.calls[0].prompt).toMatch(/not a git repository/);
 
-    const approved = scriptedUI({ confirms: [true] });
-    await expect(gitSafetyCheck(repo.root, approved.confirm)).resolves.toBe(true);
+    const approved = scriptedUI({ confirmWithNotes: [{ yes: true }] });
+    await expect(gitSafetyCheck(repo.root, approved.confirmWithNote)).resolves.toBe(true);
   });
 
   test('git repository with no commits warns and requires confirmation', async () => {
@@ -152,8 +187,8 @@ describe('git safety check (AC16)', () => {
 
     expect(await describeGitState(repo.root)).toMatch(/no commits/);
 
-    const ui = scriptedUI({ confirms: [false] });
-    await expect(gitSafetyCheck(repo.root, ui.confirm)).resolves.toBe(false);
+    const ui = scriptedUI({ confirmWithNotes: [{ yes: false }] });
+    await expect(gitSafetyCheck(repo.root, ui.confirmWithNote)).resolves.toBe(false);
     expect(ui.calls[0].prompt).toMatch(/no commits/);
   });
 });
