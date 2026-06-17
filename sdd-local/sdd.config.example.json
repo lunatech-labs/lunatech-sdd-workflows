@@ -1,0 +1,9 @@
+{
+  "ollamaBaseUrl": "http://localhost:11434",
+  "models": {
+    "supervisor": "replace-with-a-model-from-ollama-list",
+    "planner": "replace-with-a-model-from-ollama-list",
+    "implementer": "replace-with-a-model-from-ollama-list",
+    "critic": "replace-with-a-model-from-ollama-list"
+  }
+}
