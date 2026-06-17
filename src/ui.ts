@@ -8,6 +8,17 @@
 import * as readline from 'node:readline/promises';
 import { coloursEnabled, makePalette } from './colour';
 
+/**
+ * The result of a choice prompt: either a predefined option (with an optional
+ * attached note) or a free-text response chosen via "Something else...".
+ */
+export type ChoiceResult =
+  | { option: string; note?: string }
+  | { freeText: string };
+
+/** The literal label of the final "Something else..." menu item. */
+export const SOMETHING_ELSE = 'Something else...';
+
 export interface UI {
   /** Ask a free-form question and return the trimmed answer. */
   ask(question: string): Promise<string>;
@@ -25,6 +36,22 @@ export interface UI {
    * blank lines dropped.
    */
   readAnswer(message: string): Promise<string>;
+  /**
+   * Present a numbered menu of options plus a final "Something else..." item.
+   * A bare number selects that option; a number followed by free text selects
+   * the option and attaches the trailing text as a note. Choosing
+   * "Something else..." returns a free-text response (its trailing text, or a
+   * single-line prompt when none was typed). Invalid input re-prompts.
+   */
+  choose(label: string, options: string[]): Promise<ChoiceResult>;
+  /**
+   * Ask a yes/no question as a two-option Yes/No menu (built on the same choice
+   * grammar as `choose`), returning the boolean plus any attached note. As well
+   * as the menu numbers, it accepts `y`/`n` and `yes`/`no` (case-insensitive)
+   * as aliases for the two options, still with optional-note support
+   * (e.g. `y rebuild first` -> { yes: true, note: 'rebuild first' }).
+   */
+  confirmWithNote(question: string): Promise<{ yes: boolean; note?: string }>;
 }
 
 /**
@@ -78,6 +105,90 @@ export function createReadlineUI(
     }
   };
 
+  /**
+   * Render a numbered menu (the options plus a final "Something else..." item)
+   * and read one line, parsing it into a ChoiceResult. The grammar lives here
+   * in one place: a leading integer is the choice number, and any text after
+   * the number (trimmed) is an optional note. Valid numbers are
+   * 1..options.length + 1, where the last slot is the free-text escape; any
+   * other input re-prompts. Choosing the escape with trailing text returns it
+   * directly as free text; with no trailing text a single-line prompt is opened.
+   *
+   * The optional `resolveAlias` hook lets a caller (confirmWithNote) translate a
+   * non-numeric line into the equivalent numeric input BEFORE it is parsed by
+   * the numeric grammar above. This keeps caller-specific aliases (y/n/yes/no)
+   * out of the generic `choose` grammar, which stays numeric-only: `choose`
+   * simply does not pass a resolver.
+   */
+  const choosePrompt = async (
+    label: string,
+    options: string[],
+    resolveAlias?: (line: string) => string | undefined,
+  ): Promise<ChoiceResult> => {
+    if (options.length === 0) {
+      throw new Error(`choose "${label}": no options to choose from`);
+    }
+    const items = [...options, SOMETHING_ELSE];
+    const elseNumber = items.length;
+    for (;;) {
+      output.write(`${label}\n`);
+      items.forEach((item, index) => {
+        output.write(`  ${index + 1}. ${item}\n`);
+      });
+      const raw = (await askRaw(`Choose 1-${items.length}: `)).trim();
+      // A caller-supplied resolver may rewrite an alias line (e.g. "y note")
+      // into the numeric form ("1 note") before the numeric grammar runs.
+      const answer = resolveAlias?.(raw) ?? raw;
+      const match = /^(\d+)(.*)$/.exec(answer);
+      const choice = match ? Number(match[1]) : NaN;
+      if (Number.isInteger(choice) && choice >= 1 && choice <= elseNumber) {
+        const note = match ? match[2].trim() : '';
+        if (choice === elseNumber) {
+          if (note !== '') return { freeText: note };
+          const freeText = (await askRaw('Your response: ')).trim();
+          return { freeText };
+        }
+        return note === ''
+          ? { option: options[choice - 1] }
+          : { option: options[choice - 1], note };
+      }
+      output.write(`Invalid choice: ${answer}\n`);
+    }
+  };
+
+  const choose = (label: string, options: string[]): Promise<ChoiceResult> =>
+    choosePrompt(label, options);
+
+  // The Yes/No menu's option order; Yes is option 1, No is option 2.
+  const CONFIRM_OPTIONS = ['Yes', 'No'];
+
+  const confirmWithNote = async (
+    question: string,
+  ): Promise<{ yes: boolean; note?: string }> => {
+    // Translate a leading y/yes/n/no token (case-insensitive) into the matching
+    // menu number, carrying the rest of the line through as the note. This is a
+    // confirmWithNote-only convenience: choose stays numeric-only.
+    const resolveAlias = (line: string): string | undefined => {
+      const match = /^(y|yes|n|no)(\s.*)?$/i.exec(line);
+      if (!match) return undefined;
+      const number = /^y(es)?$/i.test(match[1]) ? '1' : '2';
+      return `${number}${match[2] ?? ''}`;
+    };
+    const result = await choosePrompt(question, CONFIRM_OPTIONS, resolveAlias);
+    // The Yes/No menu has no meaningful "Something else..." branch, but the
+    // shared grammar always offers it; treat a free-text escape as a note-only
+    // response that is neither yes nor no by re-deriving from the option.
+    if ('option' in result) {
+      const yes = result.option === 'Yes';
+      return result.note === undefined ? { yes } : { yes, note: result.note };
+    }
+    // A user who escaped to free text gave no yes/no; map the escape's text to a
+    // declining answer carrying the text as the note (no gate uses this path —
+    // confirm call sites only script y/n/menu input — but the shared helper
+    // guarantees this branch is reachable, so it is handled explicitly).
+    return { yes: false, note: result.freeText };
+  };
+
   const palette = makePalette(coloursEnabled(output));
   // A line containing only this submits the answer (the typeable equivalent of
   // Ctrl-D). A bare blank line is NOT a submit, so pasted blank lines survive.
@@ -104,11 +215,16 @@ export function createReadlineUI(
         while (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
         resolve(lines.join('\n'));
       };
-      const prompt = (marker: string): void => {
-        rl.setPrompt(palette.user(marker));
+      // The first line shows a plain "you> "; once the answer spans multiple
+      // lines, each continuation marker carries a label so the user knows the
+      // response has NOT been submitted and how to submit it.
+      const youMarker = palette.user('you> ');
+      const continueMarker = `${palette.hint('(keep writing, or Ctrl-D to submit)')} ${palette.user('...> ')}`;
+      const showPrompt = (marker: string): void => {
+        rl.setPrompt(marker);
         rl.prompt();
       };
-      prompt('you> ');
+      showPrompt(youMarker);
       rl.on('line', line => {
         if (done) return;
         if (line === SUBMIT_SENTINEL) {
@@ -116,12 +232,12 @@ export function createReadlineUI(
           return;
         }
         lines.push(line); // every line, including blanks, is content
-        prompt('...> ');
+        showPrompt(continueMarker);
       });
       // EOF (Ctrl-D) submits whatever was collected so far.
       rl.on('close', finish);
     });
   };
 
-  return { ask, confirm, select, readAnswer };
+  return { ask, confirm, select, readAnswer, choose, confirmWithNote };
 }
