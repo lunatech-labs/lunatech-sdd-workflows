@@ -22,9 +22,13 @@ you ──/sdd "feature idea"
 
 As a plugin, pick one:
 
+This plugin lives in the `spec-swarm/` subfolder of the
+[lunatech-sdd-workflows](https://github.com/lunatech-labs/lunatech-sdd-workflows)
+mono-repo, so the plugin path points at that subfolder, not the repo root.
+
 ```bash
 # Per-session (good for development; /reload-plugins picks up edits)
-claude --plugin-dir /path/to/spec-swarm
+claude --plugin-dir /path/to/lunatech-sdd-workflows/spec-swarm
 
 # Auto-loaded in every session: put it in your skills directory
 cp -r spec-swarm ~/.claude/skills/spec-swarm

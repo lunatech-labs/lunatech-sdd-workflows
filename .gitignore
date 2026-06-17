@@ -1,0 +1,6 @@
+.DS_Store
+*.log
+
+# sdd-local (Node/TypeScript)
+node_modules/
+dist/
