@@ -69,7 +69,8 @@ user knows — never delegate or invent them.
 - Write `specs/NNN-slug/spec.md` with sections 1–5 filled and 6 empty.
 
 **GATE 1:** show the spec summary; user approves, edits, or aborts. Do not
-proceed without explicit approval.
+proceed without explicit approval. On approval, set Status to `SPECIFIED` and
+commit the spec as a baseline (`spec NNN-slug: <feature> (Gate 1 approved)`).
 
 ## Phase 2 — PLAN (spawn sdd-planner)
 
@@ -83,13 +84,19 @@ Present: technical approach (3–6 bullets), task list, planner's open
 questions.
 
 **GATE 2:** user approves the plan and task breakdown, requests changes
-(re-spawn planner with feedback), or aborts.
+(re-spawn planner with feedback), or aborts. On approval, set Status to
+`PLANNED` and commit `plan.md` plus the spec's task breakdown as a baseline
+(`spec NNN-slug: plan + tasks (Gate 2 approved)`).
 
 ## Phase 3 — IMPLEMENT (loop: implementer → critic)
 
 Execute tasks **sequentially, in order, one at a time**. (`depends_on` fields
 exist for future parallel execution — ignore them for ordering now beyond
 sanity-checking the sequence.)
+
+Before the first task, ensure the working tree is clean — commit or stash any
+pre-existing uncommitted changes. The critic verifies by diffing against the
+last commit, so leftover prior work would be misattributed to the current task.
 
 For each unchecked task in spec section 6:
 
@@ -98,7 +105,11 @@ For each unchecked task in spec section 6:
 2. When it reports done, spawn `sdd-critic` with the same references plus the
    implementer's summary of changed files.
 3. On critic **PASS**: tick the task checkbox in spec.md, append the verdict
-   to journal.md, give the user a one-line progress note, continue.
+   to journal.md, then **commit the task's changes yourself** — the supervisor
+   commits, never the agents, and only on a critic-verified state — with the
+   message `T<n>: <task title> (critic PASS)`. Give the user a one-line
+   progress note and continue. Per-task commits give a readable history and
+   keep each task's critic diff clean against the previous commit.
 4. On critic **FAIL**: re-spawn the implementer with the critic's specific
    failures. Maximum 2 retries per task; then stop and escalate to the user
    with the critic's report.

@@ -40,6 +40,9 @@ than one task, or no task ID, stop and report the dispatch error.
   the contract.
 - If dispatched with critic feedback after a FAIL, address each failure
   point specifically — don't rewrite wholesale.
+- **Don't commit.** Make your file changes but never run `git add`, `git
+  commit`, or any other git write. The supervisor owns all commits, only on a
+  critic-verified state.
 
 ## Report back
 
