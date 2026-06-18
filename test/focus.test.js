@@ -18,7 +18,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const { parseArguments, formatTime } = require('../focus.js');
+const { parseArguments, formatTime, runInterval } = require('../focus.js');
 
 test('start with no flags uses default durations (work 25, break 5)', () => {
   const result = parseArguments(['start']);
@@ -99,4 +99,112 @@ test('formatTime: 600 seconds renders as "10:00"', () => {
 
 test('formatTime: 3600 seconds renders as "60:00" (no roll into hours)', () => {
   assert.strictEqual(formatTime(3600), '60:00');
+});
+
+// --- T5: runInterval countdown tests (AC1) ---------------------------------
+//
+// runInterval({ label, totalSeconds, deps }) drives a single countdown whose
+// only side effects are injected: deps.write (a string sink) and
+// deps.scheduleTick (a tick scheduler). These tests inject a SYNCHRONOUS fake
+// scheduler so no real time elapses: each scheduled callback fires immediately
+// in a flush loop, so a "3 second" interval (or larger) completes in
+// microseconds. There is NO real setInterval/setTimeout in the testable path.
+//
+// Counting scheme under test (matches the implementation comment): frames are
+// rendered starting at totalSeconds and ticking down, INCLUDING the final
+// 00:00 frame. So totalSeconds = 3 yields frames for 00:03, 00:02, 00:01,
+// 00:00 (one update per second, reaching zero).
+
+// Build a synchronous fake scheduler. Calls to scheduleTick(fn) enqueue fn;
+// a flush() drains the queue, running each callback immediately. Because
+// runInterval re-schedules from inside the callback, draining proceeds until
+// the countdown resolves. Returns { scheduleTick, flush, count }.
+function makeSyncScheduler() {
+  const queue = [];
+  let scheduledCount = 0;
+  const scheduleTick = (fn) => {
+    scheduledCount += 1;
+    queue.push(fn);
+    return { cancelled: false };
+  };
+  const flush = () => {
+    // Drain synchronously; callbacks may enqueue further ticks.
+    while (queue.length > 0) {
+      const fn = queue.shift();
+      fn();
+    }
+  };
+  return {
+    scheduleTick,
+    flush,
+    get count() {
+      return scheduledCount;
+    },
+  };
+}
+
+test('runInterval renders one frame per second down to 00:00 (3s)', async () => {
+  const writes = [];
+  const scheduler = makeSyncScheduler();
+
+  const promise = runInterval({
+    label: 'Work',
+    totalSeconds: 3,
+    deps: { write: (s) => writes.push(s), scheduleTick: scheduler.scheduleTick },
+  });
+
+  // Drive the fake scheduler so all ticks fire synchronously.
+  scheduler.flush();
+  await promise;
+
+  // At least one update per second, counting down to 00:00.
+  assert.ok(writes.some((w) => w.includes('00:03')), 'expected a 00:03 frame');
+  assert.ok(writes.some((w) => w.includes('00:02')), 'expected a 00:02 frame');
+  assert.ok(writes.some((w) => w.includes('00:01')), 'expected a 00:01 frame');
+  assert.ok(writes.some((w) => w.includes('00:00')), 'expected a final 00:00 frame');
+
+  // Frames use carriage-return overwrite with the label and a trailing space.
+  assert.ok(
+    writes.every((w) => w.startsWith('\rWork: ')),
+    'every frame should be a \\r-prefixed overwrite of the same line',
+  );
+});
+
+test('runInterval resolves without using real time (large interval completes instantly)', async () => {
+  const writes = [];
+  const scheduler = makeSyncScheduler();
+  const start = Date.now();
+
+  const promise = runInterval({
+    label: 'Work',
+    totalSeconds: 1500, // a full 25-minute interval
+    deps: { write: (s) => writes.push(s), scheduleTick: scheduler.scheduleTick },
+  });
+
+  scheduler.flush();
+  await promise; // resolves only via the injected fake scheduler
+
+  const elapsedMs = Date.now() - start;
+  // 1500 frames + the initial frame = 1501 writes; reaches 00:00.
+  assert.strictEqual(writes.length, 1501, 'expected one frame per second plus the initial frame');
+  assert.ok(writes[writes.length - 1].includes('00:00'), 'last frame should be 00:00');
+  assert.ok(elapsedMs < 500, `expected near-instant completion, took ${elapsedMs}ms`);
+});
+
+test('runInterval emits no bell or banner (notification is T6)', async () => {
+  const writes = [];
+  const scheduler = makeSyncScheduler();
+
+  const promise = runInterval({
+    label: 'Work',
+    totalSeconds: 2,
+    deps: { write: (s) => writes.push(s), scheduleTick: scheduler.scheduleTick },
+  });
+
+  scheduler.flush();
+  await promise;
+
+  const joined = writes.join('');
+  assert.ok(!joined.includes('\x07'), 'runInterval must not emit the bell byte (T6)');
+  assert.ok(!joined.includes('==='), 'runInterval must not print a banner (T6)');
 });

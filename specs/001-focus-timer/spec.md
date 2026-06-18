@@ -89,7 +89,7 @@ interval, gets a notification when it ends, and is then prompted into a
   - verifies: AC1, AC2
   - depends_on: T1
 
-- **T5 — Implement `runInterval` with injectable scheduler + countdown
+- [x] **T5 — Implement `runInterval` with injectable scheduler + countdown
   tests.** Per-second tick rendering via injected scheduler/stream; tests use a
   synchronous fake scheduler so a small interval completes instantly and assert
   at-least-once-per-second updates down to `00:00`.

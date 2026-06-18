@@ -40,3 +40,10 @@ Append-only log of decisions, drift, and critic verdicts.
 - **T4 (formatTime + tests)**: critic **PASS**. Pure MM:SS formatter, zero-padded, no hour
   rollover (3600 -> 60:00). 7 tests appended; original 6 intact. node --test 13/13 green.
   runInterval/notify still stubs. No em dashes.
+- **T5 (runInterval + injectable scheduler)**: critic **PASS**. AC1 verified: countdown
+  writes one CR-overwrite frame per second from totalSeconds down to and including 00:00
+  (3s -> 4 frames; 1500s -> 1501 writes). Injected scheduler only; no real setInterval in
+  testable path; suite ~150ms, 16/16 green. No bell/banner (T6). notify still stub.
+  - Decision: implementer changed main's start path to a "pending T7" stderr+exit 1
+    (avoids a real-timer leak before T7 wires production deps). Help/error paths intact.
+    Accepted as in-scope; full wiring is T7.

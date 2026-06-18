@@ -103,8 +103,62 @@ function formatTime(totalSeconds) {
   return `${mm}:${ss}`;
 }
 
-function runInterval(/* options */) {
-  throw new Error('runInterval not implemented yet (T5)');
+// --- Interval runner (T5) --------------------------------------------------
+//
+// runInterval drives a single countdown interval. All side effects (writing
+// to a stream, scheduling ticks) are injected via `deps` so tests can run a
+// "25-minute" interval in microseconds with a synchronous fake scheduler and
+// never touch a real clock.
+//
+//   runInterval({ label, totalSeconds, deps }) -> Promise<void>
+//   deps = { write, scheduleTick }
+//     - write(str): writes a string to the output sink (no newline added).
+//     - scheduleTick(fn): schedules `fn` to run once after ~1 second and
+//       returns a cancel handle. In production this wraps setInterval/Timeout;
+//       in tests it fires synchronously so the countdown completes instantly.
+//
+// Counting scheme (load-bearing, so the critic can verify intent):
+//   The countdown renders one frame per second STARTING at `totalSeconds` and
+//   ticking DOWN, INCLUDING the final 00:00 frame. So for totalSeconds = 3 the
+//   rendered remaining values are 3, 2, 1, 0 -> "00:03", "00:02", "00:01",
+//   "00:00" (four frames; at-least-once-per-second updates down to 00:00).
+//   The initial frame (totalSeconds) is written immediately; each subsequent
+//   frame is written on a scheduled tick. The returned Promise resolves once
+//   the 00:00 frame has been written. No bell or banner is emitted here; the
+//   notification (bell + banner) belongs to T6.
+function runInterval({ label, totalSeconds, deps }) {
+  const { write, scheduleTick } = deps;
+
+  return new Promise((resolve) => {
+    let remaining = totalSeconds;
+
+    const render = (value) => {
+      // Carriage-return overwrite: each frame redraws the same terminal line.
+      write(`\r${label}: ${formatTime(value)} `);
+    };
+
+    // Frame for the starting value (e.g. "00:03").
+    render(remaining);
+
+    if (remaining <= 0) {
+      // Already at (or below) zero: the 00:00 frame is the only frame.
+      resolve();
+      return;
+    }
+
+    const tick = () => {
+      remaining -= 1;
+      render(remaining);
+      if (remaining <= 0) {
+        // Reached 00:00: stop scheduling and complete.
+        resolve();
+        return;
+      }
+      scheduleTick(tick);
+    };
+
+    scheduleTick(tick);
+  });
 }
 
 function notify(/* write, bell, label */) {
@@ -165,9 +219,14 @@ function main(argv = process.argv.slice(2)) {
     return;
   }
 
-  // The actual timer (runInterval / runSession) is wired up in later tasks.
-  // Keep the error/help paths intact; the start path is still a stub here.
-  runInterval({ work: parsed.work, break: parsed.break });
+  // The actual timer (production deps -> runInterval / runSession) is wired up
+  // end-to-end in T7. runInterval is fully implemented and unit-tested (T5),
+  // but the start path here stays a deferred placeholder so the help/error
+  // paths cannot regress and no real timer leaks before T7 builds prod deps.
+  process.stderr.write(
+    "focus: start is not wired up yet (pending T7).\n",
+  );
+  process.exit(1);
 }
 
 module.exports = {
