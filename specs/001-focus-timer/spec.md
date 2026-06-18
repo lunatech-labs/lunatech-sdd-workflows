@@ -1,6 +1,6 @@
 # Feature Spec: Focus — a CLI Pomodoro timer
 
-> Status: SPECIFIED
+> Status: PLANNED
 > Spec folder: specs/001-focus-timer/
 
 ## 1. Mission / Why
@@ -61,7 +61,54 @@ interval, gets a notification when it ends, and is then prompted into a
 
 ## 6. Task Breakdown
 
-<!-- Filled in by the planner, approved at Gate 2. -->
+> Sequential execution; `depends_on` declared for future parallelism.
+> Detail in `plan.md` (same folder).
+
+- **T1 — Scaffold `focus.js` + help text.** Create single-file `focus.js`
+  (shebang, module guard, stub exports) and fully implement `helpText()` and
+  the help path in `main` (`--help`/`-h`/no-args prints usage listing `start`,
+  `--work`, `--break`; exits 0).
+  - verifies: AC4
+  - depends_on: none
+
+- **T2 — Failing tests for arg parsing & validation.** Create
+  `test/focus.test.js` (`node:test` + `node:assert`) covering default
+  durations, `--work`/`--break` overrides, and invalid values (`abc`, `-5`,
+  `0`). Tests fail until T3 (test-first).
+  - verifies: AC3, AC5
+  - depends_on: T1
+
+- **T3 — Implement `parseArguments` + validation.** Implement parsing via
+  `node:util` `parseArgs`, positive-integer validation, and `main` error
+  handling (stderr + non-zero exit before any timer starts). Makes T2 pass.
+  - verifies: AC3, AC5
+  - depends_on: T2
+
+- **T4 — Implement `formatTime` + tests.** Pure `MM:SS` formatter with unit
+  tests.
+  - verifies: AC1, AC2
+  - depends_on: T1
+
+- **T5 — Implement `runInterval` with injectable scheduler + countdown
+  tests.** Per-second tick rendering via injected scheduler/stream; tests use a
+  synchronous fake scheduler so a small interval completes instantly and assert
+  at-least-once-per-second updates down to `00:00`.
+  - verifies: AC1
+  - depends_on: T3, T4
+
+- **T6 — Implement `notify` (bell + banner) + transition tests.** Bell + banner
+  via injected sinks; `runSession` runs work then break with a notify between.
+  Tests assert bell fired once at work end, banner printed, and break countdown
+  started with configured duration.
+  - verifies: AC2, AC3
+  - depends_on: T5
+
+- **T7 — Wire `main` end-to-end + smoke test.** Build production deps (real
+  scheduler, `process.stdout`, real bell), run `runSession`, `chmod +x`. Smoke
+  run with tiny durations shows countdown, bell, banner, break countdown; full
+  `node --test` passes.
+  - verifies: AC1, AC2
+  - depends_on: T6
 
 ## 7. Open Questions
 
