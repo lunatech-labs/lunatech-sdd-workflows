@@ -244,7 +244,38 @@ function helpText() {
   ].join('\n');
 }
 
-// --- Entry point (T1 implements only the help path) ------------------------
+// --- Production dependencies (T7) ------------------------------------------
+//
+// buildProductionDeps assembles the REAL side-effecting dependencies that the
+// `start` path injects into runSession. These are the only place a real timer
+// is allowed to live: runInterval/runSession themselves stay pure-by-injection
+// so the test suite never touches a real clock.
+//
+//   write(str): writes to process.stdout.
+//   bell(): writes the bell BYTE (\x07, i.e. \a) to process.stdout once.
+//   scheduleTick(fn): schedules `fn` to run once after `tickMs` (default 1000)
+//     and returns a cancel handle. This matches runInterval's contract: each
+//     tick re-schedules from inside the callback, and the final 00:00 tick does
+//     NOT re-schedule, so no lingering timer keeps the event loop alive. The
+//     returned handle exposes a cancel so a caller can clear a pending tick.
+//
+// `tickMs` is injectable so a smoke harness can run the real-timer path on a
+// short tick. It is NOT a user-facing flag and does not touch the minute-based
+// CLI contract.
+function buildProductionDeps({ stdout = process.stdout, tickMs = 1000 } = {}) {
+  return {
+    write: (str) => stdout.write(str),
+    bell: () => stdout.write('\x07'),
+    scheduleTick: (fn) => {
+      const handle = setTimeout(fn, tickMs);
+      return {
+        cancel: () => clearTimeout(handle),
+      };
+    },
+  };
+}
+
+// --- Entry point (T1 help path; T7 wires the start path end-to-end) --------
 
 function main(argv = process.argv.slice(2)) {
   if (argv.length === 0) {
@@ -277,14 +308,22 @@ function main(argv = process.argv.slice(2)) {
     return;
   }
 
-  // The actual timer (production deps -> runInterval / runSession) is wired up
-  // end-to-end in T7. runInterval is fully implemented and unit-tested (T5),
-  // but the start path here stays a deferred placeholder so the help/error
-  // paths cannot regress and no real timer leaks before T7 builds prod deps.
-  process.stderr.write(
-    "focus: start is not wired up yet (pending T7).\n",
-  );
-  process.exit(1);
+  // Start path (T7): build the real side-effecting deps and run the full
+  // session (work -> bell + banner -> break) on the real clock. The returned
+  // Promise is handled so a failure surfaces as a non-zero exit rather than an
+  // unhandled rejection; on clean completion the process exits 0 on its own
+  // (no lingering timer keeps the event loop alive).
+  const deps = buildProductionDeps();
+  runSession({ workMinutes: parsed.work, breakMinutes: parsed.break, deps })
+    .then(() => {
+      // Leave the cursor on a fresh line after the final countdown frame.
+      process.stdout.write('\n');
+      process.exit(0);
+    })
+    .catch((err) => {
+      process.stderr.write(`focus: ${err && err.message ? err.message : err}\n`);
+      process.exit(1);
+    });
 }
 
 module.exports = {
@@ -293,6 +332,7 @@ module.exports = {
   runInterval,
   notify,
   runSession,
+  buildProductionDeps,
   helpText,
   main,
   DEFAULT_WORK_MINUTES,

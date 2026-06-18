@@ -1,6 +1,6 @@
 # Feature Spec: Focus — a CLI Pomodoro timer
 
-> Status: PLANNED
+> Status: DONE
 > Spec folder: specs/001-focus-timer/
 
 ## 1. Mission / Why
@@ -103,7 +103,7 @@ interval, gets a notification when it ends, and is then prompted into a
   - verifies: AC2, AC3
   - depends_on: T5
 
-- **T7 — Wire `main` end-to-end + smoke test.** Build production deps (real
+- [x] **T7 — Wire `main` end-to-end + smoke test.** Build production deps (real
   scheduler, `process.stdout`, real bell), run `runSession`, `chmod +x`. Smoke
   run with tiny durations shows countdown, bell, banner, break countdown; full
   `node --test` passes.

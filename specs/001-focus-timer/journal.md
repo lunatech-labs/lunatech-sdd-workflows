@@ -52,3 +52,19 @@ Append-only log of decisions, drift, and critic verdicts.
   Ordering asserted (Work frames -> bell+banner -> Break frames). AC3 break-duration honored
   (distinct 3s/5s test would catch a swap). Banner ASCII, no em dashes. Injected scheduler
   only; 19/19 green, ~145ms. main still "pending T7"; help/error intact.
+- **T7 (wire main end-to-end + smoke)**: critic **PASS**. buildProductionDeps (real
+  setTimeout-based scheduleTick, stdout write, \x07 bell byte) is the only place a real timer
+  lives; runInterval/runSession still injected. main start path runs runSession then exits 0
+  (.catch -> stderr + exit 1). Smoke (smoke/smoke.js, outside test/) proves AC1/AC2 live:
+  Work MM:SS countdown -> single \x07 bell (verified via od) -> banner -> Break countdown to
+  00:00 -> exits on its own, exit 0, ~557ms, no lingering handle. node --test 19/19 (exactly,
+  not 20 -> no smoke leak). chmod +x set. No em dashes.
+
+## 2026-06-18 — DONE
+
+- All 7 tasks complete and critic-verified. All acceptance criteria AC1–AC5 satisfied
+  (AC1/AC2 confirmed end-to-end with a real timer via the smoke harness; AC3/AC4/AC5 via
+  unit tests + live CLI runs). Status -> DONE.
+- No spec drift recorded during implementation. No retries needed (every task PASSed first
+  attempt). Out-of-scope items correctly NOT built: no stats/history, no persisted config,
+  no long break, no network/external services.
