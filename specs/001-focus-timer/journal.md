@@ -19,3 +19,11 @@ Append-only log of decisions, drift, and critic verdicts.
   - Tests live in a separate `test/focus.test.js` (no runtime dep; "single-file" applies to the shipped CLI).
   - AC5 `--work -5` is an explicitly tested edge of `parseArgs`, not an assumption.
 - Plan approved. Status -> PLANNED.
+
+## 2026-06-18 — IMPLEMENT
+
+- **T1 (Scaffold + help)**: critic **PASS**. `node focus.js --help` / `-h` / no-args
+  print usage listing `start`, `--work`, `--break`; exit 0. Module guard verified
+  (import does not launch CLI). Timer/parse/notify correctly left as throwing stubs.
+  Supervisor fixed two em dashes in focus.js (org doc convention) before commit; not
+  AC-relevant.

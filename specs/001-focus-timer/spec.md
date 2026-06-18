@@ -64,7 +64,7 @@ interval, gets a notification when it ends, and is then prompted into a
 > Sequential execution; `depends_on` declared for future parallelism.
 > Detail in `plan.md` (same folder).
 
-- **T1 — Scaffold `focus.js` + help text.** Create single-file `focus.js`
+- [x] **T1 — Scaffold `focus.js` + help text.** Create single-file `focus.js`
   (shebang, module guard, stub exports) and fully implement `helpText()` and
   the help path in `main` (`--help`/`-h`/no-args prints usage listing `start`,
   `--work`, `--break`; exits 0).
