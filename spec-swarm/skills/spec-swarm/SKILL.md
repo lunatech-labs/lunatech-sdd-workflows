@@ -51,8 +51,22 @@ Number folders sequentially (`001-`, `002-`, …). Template:
 
 ## Phase 1 — SPECIFY (interview, you do this inline)
 
-Interview the user to fill spec sections 1–5. These capture what only the
-user knows — never delegate or invent them.
+Fill spec sections 1–5 — what only the user knows; never delegate or invent
+them. Two ways in: **ingest mode** when the user supplied an existing
+spec/draft file, otherwise the **interview**.
+
+**Ingest mode** (`/sdd @path/to/spec.md`, or any input resolving to an existing
+`.md` spec/draft under the repo root). Read the file; if it is missing or
+unreadable, warn the user and fall back to the interview below. Map its content
+onto template sections 1–5 as best you can — a draft or RFC won't match the
+template exactly. Then treat the draft as the user's answers and **only ask
+focused clarifications for sections that are missing, empty, or ambiguous**
+(e.g. fewer than 2 out-of-scope items, or untestable acceptance criteria). Do
+NOT re-ask sections the draft already answers — preserve the author's wording.
+Anything unresolved goes in Open Questions. Write `specs/NNN-slug/spec.md` and
+continue to Gate 1.
+
+**Interview** (no spec file supplied). Interview the user to fill sections 1–5:
 
 - Ask **one focused question at a time**, in section order: Mission → Outcome
   → Scope → Constraints → Acceptance criteria. Batch quick follow-ups.
