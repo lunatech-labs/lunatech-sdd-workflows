@@ -31,3 +31,9 @@ Append-only log of decisions, drift, and critic verdicts.
   6 tests (defaults 25/5, overrides 50/10, invalid abc/-5/0/bad-break). All 6 run and FAIL
   via the parseArguments stub throwing (genuine red, not import error). focus.js unchanged.
   Stdlib only.
+- **T3 (parseArguments + validation)**: critic **PASS**. node --test 6/6 green. AC3
+  overrides (50/10) and defaults (25/5) correct. AC5: invalid abc/-5/0 all -> stderr +
+  exit 1, no timer, no uncaught throw (parseArgs throw caught for `--work -5`). AC4 help
+  intact. formatTime/runInterval/notify still stubs. No em dashes.
+  - Note: `--work -5` surfaces parseArgs' raw "ambiguous" message rather than the friendly
+    one. Satisfies AC5; flagged as optional future polish.

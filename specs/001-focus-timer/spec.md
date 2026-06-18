@@ -78,7 +78,7 @@ interval, gets a notification when it ends, and is then prompted into a
   - verifies: AC3, AC5
   - depends_on: T1
 
-- **T3 — Implement `parseArguments` + validation.** Implement parsing via
+- [x] **T3 — Implement `parseArguments` + validation.** Implement parsing via
   `node:util` `parseArgs`, positive-integer validation, and `main` error
   handling (stderr + non-zero exit before any timer starts). Makes T2 pass.
   - verifies: AC3, AC5
