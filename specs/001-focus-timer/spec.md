@@ -96,7 +96,7 @@ interval, gets a notification when it ends, and is then prompted into a
   - verifies: AC1
   - depends_on: T3, T4
 
-- **T6 — Implement `notify` (bell + banner) + transition tests.** Bell + banner
+- [x] **T6 — Implement `notify` (bell + banner) + transition tests.** Bell + banner
   via injected sinks; `runSession` runs work then break with a notify between.
   Tests assert bell fired once at work end, banner printed, and break countdown
   started with configured duration.

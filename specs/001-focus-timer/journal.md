@@ -47,3 +47,8 @@ Append-only log of decisions, drift, and critic verdicts.
   - Decision: implementer changed main's start path to a "pending T7" stderr+exit 1
     (avoids a real-timer leak before T7 wires production deps). Help/error paths intact.
     Accepted as in-scope; full wiring is T7.
+- **T6 (notify + runSession transition)**: critic **PASS**. AC2 verified: at work-zero the
+  injected bell fires exactly once, banner prints, then a Break countdown runs to 00:00.
+  Ordering asserted (Work frames -> bell+banner -> Break frames). AC3 break-duration honored
+  (distinct 3s/5s test would catch a swap). Banner ASCII, no em dashes. Injected scheduler
+  only; 19/19 green, ~145ms. main still "pending T7"; help/error intact.

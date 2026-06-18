@@ -161,8 +161,66 @@ function runInterval({ label, totalSeconds, deps }) {
   });
 }
 
-function notify(/* write, bell, label */) {
-  throw new Error('notify not implemented yet (T6)');
+// --- Notification (T6) -----------------------------------------------------
+//
+// notify announces the end of an interval. All side effects are injected via
+// `deps` so tests assert the behavior without making real terminal noise:
+//
+//   notify({ write, bell }, label) -> void
+//     - write(str): writes a string to the output sink.
+//     - bell(): emits the terminal bell exactly once (production wraps a write
+//       of the bell byte; tests pass a counter).
+//
+// It first writes a newline (the countdown used carriage-return overwrite and
+// left the cursor mid-line), rings the bell exactly once, then prints a banner
+// line for the given label followed by a newline. ASCII only, no em dashes.
+const BANNERS = {
+  Work: '=== Work complete! Time for a break. ===',
+  Break: '=== Break over! Back to work. ===',
+};
+
+function notify(deps, label) {
+  const { write, bell } = deps;
+  // Move off the carriage-return overwrite line before announcing.
+  write('\n');
+  // Ring the terminal bell exactly once.
+  bell();
+  const banner = BANNERS[label] || `=== ${label} complete! ===`;
+  write(`${banner}\n`);
+}
+
+// --- Session orchestrator (T6) ---------------------------------------------
+//
+// runSession runs a full Pomodoro session: a WORK interval, then a bell +
+// banner notification, then a BREAK interval. Every side effect is injected
+// via `deps` (the SAME injectable pattern as runInterval plus a `bell`) so the
+// whole session is driven synchronously in tests with no real timers.
+//
+//   runSession({ workMinutes, breakMinutes, deps }) -> Promise<void>
+//   deps = { write, scheduleTick, bell }
+//
+// The work and break intervals are sized in seconds (minutes * 60) and labeled
+// "Work" and "Break". notify fires exactly once, at the work-to-break
+// transition (AC2). The break interval honors the configured break duration
+// (AC3). No real setInterval/setTimeout is used here; production deps are
+// wired in T7.
+async function runSession({ workMinutes, breakMinutes, deps }) {
+  const { write, scheduleTick, bell } = deps;
+
+  await runInterval({
+    label: 'Work',
+    totalSeconds: workMinutes * 60,
+    deps: { write, scheduleTick },
+  });
+
+  // Work-to-break transition: bell + banner exactly once (AC2).
+  notify({ write, bell }, 'Work');
+
+  await runInterval({
+    label: 'Break',
+    totalSeconds: breakMinutes * 60,
+    deps: { write, scheduleTick },
+  });
 }
 
 // --- Help text (T1, fully implemented) -------------------------------------
@@ -234,6 +292,7 @@ module.exports = {
   formatTime,
   runInterval,
   notify,
+  runSession,
   helpText,
   main,
   DEFAULT_WORK_MINUTES,
