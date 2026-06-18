@@ -71,7 +71,7 @@ interval, gets a notification when it ends, and is then prompted into a
   - verifies: AC4
   - depends_on: none
 
-- **T2 — Failing tests for arg parsing & validation.** Create
+- [x] **T2 — Failing tests for arg parsing & validation.** Create
   `test/focus.test.js` (`node:test` + `node:assert`) covering default
   durations, `--work`/`--break` overrides, and invalid values (`abc`, `-5`,
   `0`). Tests fail until T3 (test-first).

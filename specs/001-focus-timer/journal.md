@@ -27,3 +27,7 @@ Append-only log of decisions, drift, and critic verdicts.
   (import does not launch CLI). Timer/parse/notify correctly left as throwing stubs.
   Supervisor fixed two em dashes in focus.js (org doc convention) before commit; not
   AC-relevant.
+- **T2 (Failing tests, test-first)**: critic **PASS**. `test/focus.test.js` created with
+  6 tests (defaults 25/5, overrides 50/10, invalid abc/-5/0/bad-break). All 6 run and FAIL
+  via the parseArguments stub throwing (genuine red, not import error). focus.js unchanged.
+  Stdlib only.
