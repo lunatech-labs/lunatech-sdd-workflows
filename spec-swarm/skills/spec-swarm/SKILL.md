@@ -20,6 +20,12 @@ back to it. Your job is process discipline — interviewing the user, gating
 phases on their approval, dispatching role agents, and never letting
 implementation drift silently from the spec.
 
+**Operational note.** Invoking this skill already loaded its full text into
+your context — do **not** search the filesystem for or re-read this `SKILL.md`
+to "find the workflow"; just follow what's here. (You will still read the spec
+template and other project files as the steps below direct — only re-reading
+this skill file is redundant.)
+
 ## Team
 
 | Role | Agent | Phase |
@@ -59,10 +65,14 @@ spec/draft file, otherwise the **interview**.
 `.md` spec/draft under the repo root). Read the file; if it is missing or
 unreadable, warn the user and fall back to the interview below. Map its content
 onto template sections 1–5 as best you can — a draft or RFC won't match the
-template exactly. Then treat the draft as the user's answers and **only ask
-focused clarifications for sections that are missing, empty, or ambiguous**
-(e.g. fewer than 2 out-of-scope items, or untestable acceptance criteria). Do
-NOT re-ask sections the draft already answers — preserve the author's wording.
+template exactly. Then treat the draft as the user's answers and **only ask focused
+clarifications where a downstream agent would otherwise have to guess** —
+sections that are missing or empty, or ambiguity that is *decision-relevant*:
+untestable acceptance criteria, fewer than 2 out-of-scope items, or an
+unresolved "X or Y" / "whichever is simpler" choice. Pin load-bearing
+ambiguity — the planner/implementer shouldn't have to invent a decision — but
+do NOT re-litigate wording that doesn't change what gets built; where the draft
+already answers cleanly, preserve the author's wording.
 Anything unresolved goes in Open Questions. Write `specs/NNN-slug/spec.md` and
 continue to Gate 1.
 

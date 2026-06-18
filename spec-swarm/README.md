@@ -8,15 +8,49 @@ with you approving each phase gate.
 Inspired by Spec Kit's specify → plan → tasks → implement phases and the
 planner/doer/critic/supervisor role model for agent teams.
 
+## How it works
+
+```mermaid
+flowchart TD
+    A["1 · SPECIFY<br/>supervisor interviews you,<br/>or ingests a draft"]:::agent
+    G1{{"GATE 1: you approve the spec"}}:::human
+    B["2 · PLAN<br/>planner writes plan.md + tasks"]:::agent
+    G2{{"GATE 2: you approve the plan"}}:::human
+
+    subgraph L["3 · IMPLEMENT (repeats per task)"]
+        direction TB
+        I["Implementer<br/>builds one task, spec-bound"]:::agent
+        C["Critic<br/>re-runs tests, verifies vs spec"]:::agent
+        I -->|done| C
+        C -->|"FAIL: retry, max 2"| I
+    end
+
+    P["4 · PRESENT<br/>results vs acceptance criteria"]:::agent
+    SPEC[("spec.md<br/>the contract")]:::artifact
+    D{"DRIFT?<br/>spec or plan wrong"}:::human
+    NX(["next task, or all done"]):::muted
+
+    A --> G1 --> B --> G2 --> L
+    C -->|"PASS: supervisor commits & ticks"| NX --> P
+    A -.->|produces| SPEC
+    SPEC -.->|checked against| C
+    C -.->|drift| D -.->|amend, then resume| G1
+
+    classDef agent fill:#EEEDFE,stroke:#7F77DD,color:#26215C;
+    classDef human fill:#FAECE7,stroke:#D85A30,color:#4A1B0C;
+    classDef artifact fill:#E1F5EE,stroke:#1D9E75,color:#04342C;
+    classDef muted fill:#F1EFE8,stroke:#888780,color:#2C2C2A;
 ```
-you ──/sdd "feature idea"
-        │
-   Phase 1 SPECIFY   skill interviews you → specs/NNN-slug/spec.md   [GATE: you approve]
-   Phase 2 PLAN      sdd-planner → plan.md + task breakdown          [GATE: you approve]
-   Phase 3 IMPLEMENT loop per task: sdd-implementer → sdd-critic
-                     PASS → checkbox ticked; FAIL → retry (max 2); DRIFT → escalates to you
-   Phase 4 PRESENT   summary vs. acceptance criteria + recorded drift
-```
+
+**The roles**
+
+- **You (human):** approve each gate. Nothing advances without your sign-off, and scope never changes silently.
+- **Supervisor (the skill):** interview or ingest a draft, run the gates, dispatch the agents, commit each verified task, escalate drift.
+- **Planner:** turn the approved spec into `plan.md` + a task breakdown. Plans only, never writes code.
+- **Implementer:** build exactly one task, bound to the spec. Never commits.
+- **Critic:** independently re-run the tests and judge each task (PASS / FAIL / DRIFT). Verifies, never fixes.
+
+The **spec is the contract**: planner, implementer, and critic all work against it, and the critic verifies every task against its acceptance criteria.
 
 ## Install
 
