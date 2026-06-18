@@ -84,7 +84,7 @@ interval, gets a notification when it ends, and is then prompted into a
   - verifies: AC3, AC5
   - depends_on: T2
 
-- **T4 — Implement `formatTime` + tests.** Pure `MM:SS` formatter with unit
+- [x] **T4 — Implement `formatTime` + tests.** Pure `MM:SS` formatter with unit
   tests.
   - verifies: AC1, AC2
   - depends_on: T1

@@ -37,3 +37,6 @@ Append-only log of decisions, drift, and critic verdicts.
   intact. formatTime/runInterval/notify still stubs. No em dashes.
   - Note: `--work -5` surfaces parseArgs' raw "ambiguous" message rather than the friendly
     one. Satisfies AC5; flagged as optional future polish.
+- **T4 (formatTime + tests)**: critic **PASS**. Pure MM:SS formatter, zero-padded, no hour
+  rollover (3600 -> 60:00). 7 tests appended; original 6 intact. node --test 13/13 green.
+  runInterval/notify still stubs. No em dashes.
