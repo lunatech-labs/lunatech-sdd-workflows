@@ -34,3 +34,11 @@ Append-only log of decisions, drift, and critic verdicts.
   defines the concrete lib/session.js contract: createSession({ durations,
   scheduler }), scheduler shape { scheduleTick, tick, pending }, parseDurations
   returning { workSeconds, breakSeconds }. T2 is bound to this contract.
+- T2 (implement lib/session.js): critic PASS. Only lib/session.js added; tests
+  14 pass, full suite 33 pass, no regressions. AC6 reuse confirmed genuine:
+  counting flows through focus.js runInterval for both phases (remaining parsed
+  from runInterval's rendered frame, no parallel counter), banner sourced from
+  focus.js notify('Work'), no reimplemented formatter. parseDurations validates
+  and falls back correctly. Transition runs synchronously inside the write sink
+  (runInterval's Promise resolves async; tests fire ticks synchronously) -
+  permitted by plan's adapter allowance.

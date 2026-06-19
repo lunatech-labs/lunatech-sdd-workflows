@@ -198,7 +198,7 @@ control the timer. The countdown is driven by the Node server (which reuses
 - verifies: AC2, AC3, AC4, AC5, AC5a, AC5b, AC5c, AC6
 - depends_on: none
 
-### T2: Implement `lib/session.js` reusing focus.js (make T1 pass)
+### [x] T2: Implement `lib/session.js` reusing focus.js (make T1 pass)
 
 - **Does:** create `lib/session.js`. Import `formatTime`, `runInterval`, and
   `notify` from `../focus.js`. Provide a pure `parseDurations(env)` that
