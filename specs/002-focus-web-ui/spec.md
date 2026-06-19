@@ -221,7 +221,7 @@ control the timer. The countdown is driven by the Node server (which reuses
 - verifies: AC2, AC3, AC4, AC5, AC5a, AC5b, AC5c, AC6
 - depends_on: T1
 
-### T3: Failing HTTP integration tests for the server (incl. transition, env, restart)
+### [x] T3: Failing HTTP integration tests for the server (incl. transition, env, restart)
 
 - **Does:** create `test/server.test.js`. Start the server via a factory that
   accepts an injectable scheduler AND injectable durations/env, on an ephemeral

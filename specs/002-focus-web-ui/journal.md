@@ -42,3 +42,10 @@ Append-only log of decisions, drift, and critic verdicts.
   and falls back correctly. Transition runs synchronously inside the write sink
   (runInterval's Promise resolves async; tests fire ticks synchronously) -
   permitted by plan's adapter allowance.
+- T3 (failing HTTP integration tests): critic PASS. Only test/server.test.js
+  added; fails cleanly (MODULE_NOT_FOUND on server.js), full suite 34/33/1.
+  All ACs (1,2,3,4,5,5a,5b,5c) have real assertions; ephemeral port listen(0),
+  injected manual scheduler, clean teardown. Documents server factory contract
+  for T4: createServer({ env, scheduler }) -> { server, listen, close }; routes
+  GET / /styles.css /app.js /api/state, POST /api/start|pause|reset; must not
+  arm a real timer when a scheduler is injected.
