@@ -49,3 +49,10 @@ Append-only log of decisions, drift, and critic verdicts.
   for T4: createServer({ env, scheduler }) -> { server, listen, close }; routes
   GET / /styles.css /app.js /api/state, POST /api/start|pause|reset; must not
   arm a real timer when a scheduler is injected.
+- T4 (implement server.js): critic PASS. server.js (stdlib only) + THREE minimal
+  PLACEHOLDER public files (index.html/styles.css/app.js) created so AC1's 200
+  checks pass; placeholders flagged and do NOT contain Lunatech tokens, so T5
+  (real UI) is still required and must replace them. Full suite 41 pass.
+  Factory + scheduler injection + routes + MIME + path-traversal guard + module
+  guard all verified live; production ~1s scheduler unref'd + cleared, no timer
+  leak after done/close. Contract tests unchanged.

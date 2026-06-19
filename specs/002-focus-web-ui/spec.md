@@ -246,7 +246,7 @@ control the timer. The countdown is driven by the Node server (which reuses
 - verifies: AC1, AC2, AC3, AC4, AC5, AC5a, AC5b, AC5c
 - depends_on: T2
 
-### T4: Implement `server.js` (make T3 pass)
+### [x] T4: Implement `server.js` (make T3 pass)
 
 - **Does:** create `server.js` using `node:http`/`node:fs`/`node:path` only.
   Expose a factory (e.g. `createServer({ env, scheduler })`) holding one
