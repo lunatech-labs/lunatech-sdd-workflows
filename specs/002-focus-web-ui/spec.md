@@ -175,7 +175,7 @@ control the timer. The countdown is driven by the Node server (which reuses
 > exports (`formatTime`, `runInterval`, and the `notify` banner text);
 > `focus.js` is not modified.
 
-### T1: Failing unit tests for the session model (incl. phase, transition, env config)
+### [x] T1: Failing unit tests for the session model (incl. phase, transition, env config)
 
 - **Does:** create `test/session.test.js` with `node:test` + `node:assert`,
   written against the `lib/session.js` contract in plan.md. Cover, with an

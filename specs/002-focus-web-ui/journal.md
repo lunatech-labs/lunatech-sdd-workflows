@@ -28,4 +28,9 @@ Append-only log of decisions, drift, and critic verdicts.
 
 ## Implementation verdicts
 
-(appended per task below)
+- T1 (failing session unit tests): critic PASS. test/session.test.js only, no
+  production code. Fails cleanly (MODULE_NOT_FOUND on lib/session.js), all ACs
+  asserted, banner sourced from focus.js notify, injectable scheduler. The test
+  defines the concrete lib/session.js contract: createSession({ durations,
+  scheduler }), scheduler shape { scheduleTick, tick, pending }, parseDurations
+  returning { workSeconds, breakSeconds }. T2 is bound to this contract.
