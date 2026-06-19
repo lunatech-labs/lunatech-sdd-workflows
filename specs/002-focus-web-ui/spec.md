@@ -264,7 +264,7 @@ control the timer. The countdown is driven by the Node server (which reuses
 - verifies: AC1, AC2, AC3, AC4, AC5, AC5a, AC5b, AC5c
 - depends_on: T3
 
-### T5: Build the static UI in `public/` (Lunatech styling, phase + banner)
+### [x] T5: Build the static UI in `public/` (Lunatech styling, phase + banner)
 
 - **Does:** create `public/index.html`, `public/styles.css`, `public/app.js`.
   Centered card on navy `#0a1e50` (darker `#081a47` accents), pink `#db2777`

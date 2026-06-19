@@ -7,9 +7,29 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <main>
-      <p>Focus web UI placeholder. T5 builds the real styled UI.</p>
+    <main class="stage">
+      <section class="card" aria-labelledby="phase-label">
+        <p class="brand">Focus</p>
+
+        <p id="phase-label" class="phase" data-phase="work">Work</p>
+
+        <div class="clock-wrap">
+          <canvas id="ring" class="ring" width="320" height="320" aria-hidden="true"></canvas>
+          <div id="time" class="time" role="timer" aria-live="off">25:00</div>
+        </div>
+
+        <p id="banner" class="banner" role="status" aria-live="polite" hidden></p>
+
+        <div class="controls">
+          <button id="start" class="btn btn-primary" type="button">Start</button>
+          <button id="pause" class="btn btn-ghost" type="button">Pause</button>
+          <button id="reset" class="btn btn-ghost" type="button">Reset</button>
+        </div>
+
+        <p id="status" class="status">Ready when you are.</p>
+      </section>
     </main>
+
     <script src="app.js"></script>
   </body>
 </html>

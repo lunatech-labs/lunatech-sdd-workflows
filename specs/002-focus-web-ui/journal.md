@@ -56,3 +56,10 @@ Append-only log of decisions, drift, and critic verdicts.
   Factory + scheduler injection + routes + MIME + path-traversal guard + module
   guard all verified live; production ~1s scheduler unref'd + cleared, no timer
   leak after done/close. Contract tests unchanged.
+- T5 (real Lunatech UI in public/): critic PASS. Only the three public files
+  changed; suite 41 pass. AC7 tokens (#0a1e50/#db2777/#ffffff/#c5c5c5) literal,
+  Poppins-first font stack, no external fetch (no Google Fonts/CDN/@import).
+  Four UI elements + three controls present; banner rendered from state.banner
+  (not hardcoded); app.js polls /api/state every 1s and wires the POST routes.
+  Tasteful extra: self-contained canvas progress ring behind the text MM:SS
+  (does not replace it), native canvas only, no deps. No em dashes.
