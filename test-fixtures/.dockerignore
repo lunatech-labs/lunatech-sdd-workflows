@@ -1,0 +1,12 @@
+# Keep the demo image small: exclude everything not needed at runtime.
+# The runtime needs server.js, focus.js, lib/, and public/ (all kept).
+.git
+.idea
+specs
+test
+smoke
+node_modules
+*.log
+
+# Scratch and editor files.
+.DS_Store
