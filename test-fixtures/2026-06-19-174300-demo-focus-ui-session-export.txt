@@ -1,0 +1,1336 @@
+╭─── Claude Code v2.1.183 ─────────────────────────────────────────────────────╮
+│                                            │ Tips for getting started        │
+│             Welcome back Luke!             │ Run /init to create a CLAUDE.m… │
+│                                            │ ─────────────────────────────── │
+│                   ▐▛███▜▌                  │ What's new                      │
+│                  ▝▜█████▛▘                 │ Improved auto mode safety: des… │
+│                    ▘▘ ▝▝                   │ Added a warning when the reque… │
+│                                            │ Added `attribution.sessionUrl`… │
+│     Opus 4.8 · Claude Team · Lunatech      │ /release-notes for more         │
+│   ~/Documents/Projects/SDD/test-fixtures   │                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+
+❯ /spec-swarm:sdd make a simple but pretty UI for focus.js based on the styling 
+here https://lunatech.com/                                                      
+
+⏺ I'll invoke the spec-swarm skill to start the spec-driven development workflow
+  for your focus.js UI.
+
+⏺ Skill(spec-swarm:sdd)
+  ⎿  Successfully loaded skill
+
+⏺ The input describes a feature, so I'll begin Phase 1 (SPECIFY). Let me invoke
+  the spec-swarm skill.
+
+⏺ Skill(spec-swarm:spec-swarm)
+  ⎿  Successfully loaded skill
+
+⏺ I'm starting the spec-swarm workflow. Let me first orient myself — check for
+  existing specs and understand the focus.js project.
+
+  Listed 1 directory (ctrl+o to expand)
+
+⏺ There's an existing spec. Let me check its status and read focus.js to
+  understand the current state.
+
+  Read 2 files (ctrl+o to expand)
+
+⏺ The existing spec (001-focus-timer) is DONE — it's a completed CLI Pomodoro
+  timer. Your new request is a different feature: a web UI for focus.js styled
+  after lunatech.com. That's a new spec (002-), not a resume.
+
+  There are empty lib/ and public/ directories already, which suggests a web
+  frontend was anticipated. Let me check them and fetch the Lunatech styling
+  reference.
+
+  Listed 1 directory (ctrl+o to expand)
+
+⏺ Fetch(https://lunatech.com/)
+  ⎿  Received 753 bytes (200 OK)
+
+⏺ The page is JS-rendered, so WebFetch couldn't extract styling. Let me try
+  fetching raw assets to find the actual colors and fonts.
+
+⏺ Bash(cd /tmp && curl -sL --max-time 20 https://lunatech.com/ -o luna.html
+      2>/dev/null; echo "=== size ==="; wc -c luna.html; echo "=== css/font
+      links ==="; grep -oE…)
+  ⎿  === size ===
+          753 luna.html
+     === css/font links ===
+     … +5 lines (ctrl+o to expand)
+  ⎿  Shell cwd was reset to 
+     /Users/lukewoodcock/Documents/Projects/SDD/test-fixtures
+
+⏺ It's a Vite SPA. Let me grab the CSS bundle for colors and fonts.
+
+⏺ Bash(cd /tmp && curl -sL --max-time 20
+      https://lunatech.com/assets/index-DgSMyLqU.css -o luna.css 2>/dev/null;
+      echo "=== size ==="; wc -c luna.css; echo; echo "=== h…)
+  ⎿  === size ===
+        45401 luna.css
+     … +42 lines (ctrl+o to expand)
+  ⎿  Shell cwd was reset to 
+     /Users/lukewoodcock/Documents/Projects/SDD/test-fixtures
+
+⏺ I now have the Lunatech design system extracted:
+
+  - Brand pink/magenta accent: #db2777 (primary CTA color, most-used)
+  - Deep navy blues: #0a1e50, #0e2b71, #081a47, #061332 (backgrounds / dark
+  sections)
+  - Secondary rose: #e11d48
+  - Light blue tint: #78b4d7
+  - Neutrals: white #fff, light grey #c5c5c5, slate #94a3b8
+  - Font: Poppins (Regular/Medium/SemiBold/Bold), sans-serif fallback
+
+  The aesthetic: deep-navy backgrounds, crisp white text, vivid pink accents,
+  Poppins typography. A confident, modern corporate look.
+
+  Now I understand the context. This is a new feature (002-) — a web UI for the
+  focus timer — not a resume of the completed CLI spec. Let me start the SPECIFY
+  interview. I'll pre-fill from your rich request and ask focused questions.
+
+  Here's how the phases work: SPECIFY (we define the spec together) → PLAN (a
+  planner agent designs the approach) → IMPLEMENT (implementer + critic loop,
+  one task at a time) → PRESENT. You approve at each gate.
+
+  Let me ask the key questions I can't infer.
+
+⏺ User answered Claude's questions:
+  ⎿  · How should the web UI relate to the existing focus.js timer logic? → 
+     Serve via Node server
+     · What should the UI let the user do (feature scope)? → Start/pause/reset
+     · How polished/animated should the visual treatment be? → Clean & simple
+
+⏺ Got it. Notable choices:
+  - Architecture: Node server serving the UI (browser ↔ Node session state)
+  - Features: Start/pause/reset (you did not select durations, auto work→break,
+  or sound — I'll keep those out of scope unless you want them)
+  - Polish: Clean & simple
+
+  One thing to confirm before I write the spec: you picked "Serve via Node
+  server" but only selected Start/pause/reset for features. A couple of quick
+  clarifications on the boundaries.
+
+⏺ User answered Claude's questions:
+  ⎿  · Where should the countdown clock actually run, given the Node-server 
+     architecture? → Server-driven (reuse focus.js)
+     · Should the work→break transition happen in the UI, even though you didn't
+     tick 'Auto work→break'? → Work only (v1)
+
+⏺ Clear. Final picture:
+
+  - Server-driven, reusing focus.js logic. Node holds session state; browser
+  polls /api/state and posts control actions.
+  - v1 = work interval only with start/pause/reset. Break/transition, durations,
+  and sound all deferred.
+  - Clean & simple Lunatech styling (navy #0a1e50, pink #db2777, Poppins).
+
+  Now I'll write the spec. Let me create specs/002-focus-web-ui/spec.md.
+
+⏺ Bash(mkdir -p /Users/lukewoodcock/Documents/Projects/SDD/test-fixtures/specs/0
+      02-focus-web-ui && node --version && git status --short)
+  ⎿  v22.20.0
+
+⏺ Working tree is clean. Node 22. Now writing the spec (sections 1–5 filled, 6
+  empty for the planner).
+
+⏺ Write(specs/002-focus-web-ui/spec.md)
+  ⎿  Wrote 113 lines to specs/002-focus-web-ui/spec.md
+       2 # Feature Spec: Focus Web UI — a simple, pretty browser timer
+       3 > Status: DRAFT
+       4 > Spec folder: specs/002-focus-web-ui/
+       6 ## 1. Mission / Why
+       7 
+       8 The `focus` Pomodoro timer currently runs only in the terminal (
+       9 001-focus-timer, DONE). Some users would rather glance at a clea
+         n browser tab
+      10 than watch a terminal countdown. This feature adds a small, attr
+         active web UI
+     … +162 lines (ctrl+o to expand)
+
+⏺ GATE 1 — Spec review
+
+  I've written specs/002-focus-web-ui/spec.md. Summary:
+
+  Mission: A small, pretty browser UI for the focus timer — Node server reusing
+  focus.js, styled after Lunatech (navy + pink + Poppins).
+
+  Outcome: Start node server.js, open localhost, see a centered card with a
+  large MM:SS countdown and Start / Pause / Reset buttons. Countdown is
+  server-driven; browser reflects state.
+
+  In scope:
+  - Node stdlib HTTP server: serves public/ + JSON API (GET /api/state, POST 
+  /api/start|pause|reset)
+  - Server-side single session reusing focus.js, exposing { remainingSeconds, 
+  totalSeconds, status }
+  - Single-page UI (HTML/CSS/JS) with big countdown + 3 controls, Lunatech
+  styling
+
+  Out of scope: break/transition, duration inputs, sound/notifications,
+  persistence, external deps/build step, HTTPS/auth.
+
+  Acceptance criteria (testable):
+  - AC1 serve / + assets return 200
+  - AC2 initial state {1500, 1500, "idle"}
+  - AC3 start → counts down (~1/sec)
+  - AC4 pause stops, resume continues
+  - AC5 reset → idle, 1500
+  - AC6 reuses focus.js exports (not reimplemented)
+  - AC7 Lunatech tokens + large MM:SS + 3 controls
+
+  Open questions: none.
+
+  ---
+  Does this look right? Reply approve to lock the spec and move to PLAN, or tell
+  me what to edit. A couple of things you might want to weigh in on:
+  - Default port 3000 (overridable via PORT) — ok?
+  - I made AC6 (reuse focus.js) a hard criterion since you chose the reuse
+  architecture — the planner will need to drive the countdown through its
+  injectable scheduler. Good to keep?
+✻ Sautéed for 2m 8s
+
+❯ I approve, however I would like to add a compose file so that I can run it    
+  all in a container and execute with a one single line. No need for any        
+  authentication. For now this is for demo purposes only and will run locally   
+
+⏺ Good addition. Since this is a containerized demo run locally with no auth,
+  I'll fold that into the spec before locking Gate 1. Let me update scope,
+  constraints, and add an acceptance criterion.
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 3 lines
+      38  - Reuse (not reimplementation) of `focus.js`'s countdown semant
+          ics: the server
+      39    drives the work interval through `focus.js` exports (e.g. `ru
+          nInterval` /
+      40    `formatTime`) via injected dependencies; `focus.js` itself is
+           not rewritten.
+      41 +- A `Dockerfile` plus a Docker Compose file (`compose.yaml`) so
+         + the whole app                                                 
+      42 +  runs in a container with a single command (`docker compose up
+         +`), serving the                                                
+      43 +  UI on a published local port. Demo use only, run locally, no 
+         +authentication.                                                
+      44  
+      45  ### Out of scope
+      46  
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 5 lines, removed 2 lines
+      51  - No persistence, history, statistics, accounts, or multi-sessi
+          on support.
+      52  - No external runtime dependencies, build step, bundler, or fra
+          mework (no npm
+      53    install): standard-library Node plus hand-written HTML/CSS/JS
+           only.
+      54 -- No HTTPS, authentication, deployment config, or multi-client 
+         -synchronization                                                
+      55 -  guarantees (single local user assumed).                      
+      54 +- No HTTPS, authentication, or multi-client synchronization gua
+         +rantees (single                                                
+      55 +  local user assumed; this is a local demo only).              
+      56 +- No production-grade container hardening, orchestration (Kuber
+         +netes, swarm),                                                 
+      57 +  registry publishing, or cloud deployment: the container is fo
+         +r local demo use                                               
+      58 +  via `docker compose up` only.                                
+      59  
+      60  ## 4. Constraints & Decisions
+      61  
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 5 lines, removed 1 line
+      71    to render the countdown; control buttons issue `POST` request
+          s. No WebSocket
+      72    is required.
+      73  - Listening port is fixed/known (default `3000`, overridable vi
+          a `PORT` env
+      74 -  var) and logged on startup so the user knows the URL to open.
+      74 +  var) and logged on startup so the user knows the URL to open.
+         + The Compose                                                   
+      75 +  file publishes this port to the host so the browser can reach
+         + it.                                                           
+      76 +- Containerization uses a stock official Node base image (no ex
+         +tra runtime                                                    
+      77 +  dependencies installed, since the app is stdlib only). `docke
+         +r compose up`                                                  
+      78 +  builds and starts the app with a single command and no furthe
+         +r setup.                                                       
+      79  - Styling tokens (from lunatech.com): primary accent pink `#db2
+          777`, deep navy
+      80    background `#0a1e50` (with darker `#081a47` accents), white `
+          #ffffff` text,
+      81    muted grey `#c5c5c5`; font Poppins with `sans-serif` fallback
+          . Fonts loaded
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 8 lines
+      113    Poppins font with sans-serif fallback) and shows a large `MM
+           :SS` countdown
+      114    with Start, Pause, and Reset controls.
+      115  
+      116 +- [ ] AC8 (container): Given a `Dockerfile` and `compose.yaml`
+          + at the repo root,                                            
+      117 +  when a user runs `docker compose up` (single command, no pri
+          +or setup), then                                               
+      118 +  the image builds, the container starts the server, the confi
+          +gured port is                                                 
+      119 +  published to the host, and `GET /` plus `GET /api/state` suc
+          +ceed against the                                              
+      120 +  host port (same responses as AC1 and AC2). Verification of t
+          +he build/run may                                              
+      121 +  use `docker compose config` / build if a Docker daemon is un
+          +available in the                                              
+      122 +  test environment.                                           
+      123 +                                                              
+      124  ## 6. Task Breakdown
+      125  
+      126  > To be filled by the planner (Phase 2).
+
+⏺ Now I'll set Status to SPECIFIED and commit the spec as the Gate 1 baseline.
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 1 line, removed 1 line
+      1  # Feature Spec: Focus Web UI — a simple, pretty browser timer
+      2  
+      3 -> Status: DRAFT                                                 
+      3 +> Status: SPECIFIED                                             
+      4  > Spec folder: specs/002-focus-web-ui/
+      5  
+      6  ## 1. Mission / Why
+
+⏺ Bash(git add specs/002-focus-web-ui/spec.md && git commit -q -m "spec
+      002-focus-web-ui: Focus Web UI (Gate 1 approved)…)
+  ⎿  a850bd5 spec 002-focus-web-ui: Focus Web UI (Gate 1 approved)
+
+⏺ Gate 1 locked. Spec committed (a850bd5), Status = SPECIFIED, with your
+  container requirement folded in:
+  - Scope: Dockerfile + compose.yaml, one-command docker compose up, local demo,
+  no auth.
+  - AC8 added: build + run + published port + GET / and /api/state succeed
+  against the host port.
+
+  Now Phase 2 — PLAN. I'll dispatch the planner agent to explore the codebase
+  and produce plan.md + the task breakdown.
+
+⏺ spec-swarm:sdd-planner(Plan focus web UI feature)
+  ⎿  Done (9 tool uses · 39.1k tokens · 3m 43s)
+  (ctrl+o to expand)
+
+⏺ The planner finished. Let me review plan.md and the full task breakdown before
+  presenting Gate 2.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ The task breakdown is solid: test-first, every AC covered, dependencies are
+  linear and correct. Let me also glance at the plan.md to confirm the reuse
+  approach is honest before presenting.
+
+⏺ Bash(sed -n '1,90p' specs/002-focus-web-ui/plan.md 2>/dev/null | grep -nA40
+      -iE 'reuse|focus.js' | head -60)
+  ⎿  18:- **Honest reuse of `focus.js`** (AC6): the session reuses `formatT
+     ime` for any
+     19-  MM:SS rendering it does, and drives the per-second countdown thro
+     … +57 lines (ctrl+o to expand)
+
+⏺ The plan is honest and complete. The reuse approach drives the countdown
+  through runInterval with a server-controlled scheduler — real reuse, not a fig
+  leaf.
+
+  GATE 2 — Plan review
+
+  plan.md written, spec section 6 filled with a 6-task breakdown.
+
+  Technical approach:
+  - Thin stdlib HTTP server (server.js) — static files from public/ + four JSON
+  routes, one in-memory session, logs bound port.
+  - Session logic isolated in lib/session.js so it's unit-testable with
+  injectable time (no real 25-min waits).
+  - Honest focus.js reuse (AC6): session imports formatTime and drives the
+  per-second countdown through runInterval using a server-controlled scheduler —
+  the server owns the tick handle, so pause stops ticks, resume restarts, reset
+  rebuilds. focus.js is not modified.
+  - Plain static UI in public/ (HTML/CSS/JS), polls /api/state ~1/sec, Lunatech
+  tokens with a Poppins-or-system font stack (no external fetch).
+  - Dockerfile (stock node:22 image) + compose.yaml, one-command docker compose 
+  up.
+  - Tests: node:test; sessions use a manual scheduler, HTTP tests use listen(0)
+  + injectable scheduler.
+
+  Tasks (sequential, test-first):
+
+  ┌──────┬───────────────────────────────────────────────┬─────────────┐
+  │ Task │                     Title                     │  Verifies   │
+  ├──────┼───────────────────────────────────────────────┼─────────────┤
+  │ T1   │ Failing unit tests for session model          │ AC2,3,4,5   │
+  ├──────┼───────────────────────────────────────────────┼─────────────┤
+  │ T2   │ Implement lib/session.js reusing focus.js     │ AC2,3,4,5,6 │
+  ├──────┼───────────────────────────────────────────────┼─────────────┤
+  │ T3   │ Failing HTTP integration tests                │ AC1,2,3,4,5 │
+  ├──────┼───────────────────────────────────────────────┼─────────────┤
+  │ T4   │ Implement server.js                           │ AC1,2,3,4,5 │
+  ├──────┼───────────────────────────────────────────────┼─────────────┤
+  │ T5   │ Build static UI in public/ (Lunatech styling) │ AC1,7       │
+  ├──────┼───────────────────────────────────────────────┼─────────────┤
+  │ T6   │ Containerization: Dockerfile + compose.yaml   │ AC8         │
+  └──────┴───────────────────────────────────────────────┴─────────────┘
+
+  All of AC1–AC8 covered. (No Docker daemon on this machine, so T6's critic step
+  falls back to docker compose config + file checks.)
+
+  One open question from the planner I should resolve with you:
+
+  When the timer reaches zero (status: done), what should Start do?
+
+⏺ User declined to answer questions
+  ⎿  · When the work interval finishes (status 'done'), what should pressing 
+     Start do? (Restart at 25:00 / No-op (ignore))
+
+⏺ What would you like to clarify about the "done + Start" question? I want to
+  make sure I'm asking the right thing — for example, are you wondering what
+  done means here, whether this even matters for v1, or do you have a different
+  behavior in mind?
+
+✻ Worked for 3m 55s
+
+❯ Can you set the work and rest times in the compose file, so it's easy to      
+  demonstrate                                                                   
+
+⏺ Good idea for a demo — that lets you set a short work time (say 10 seconds)
+  and watch the whole cycle without waiting 25 minutes. This is a scope change
+  worth pinning before we start implementing.
+
+  Two things to note:
+  1. This brings configurable durations back in (currently out of scope) — but
+  via env var only (read from the Compose file), not UI inputs. That stays
+  consistent with "no duration controls in the UI."
+  2. You mentioned rest time too. v1 is currently work-only with no break. To
+  have a "rest" duration mean anything, we'd need the work→break transition back
+  in scope.
+
+  Let me confirm how far you want to go.
+
+⏺ User answered Claude's questions:
+  ⎿  · How should durations be configurable for the demo? → Work + break, via 
+     env
+     · When the timer finishes its last phase (status 'done'), what should Start
+     do? → Restart from beginning
+
+⏺ Clear. This expands v1 meaningfully, so I need to amend the spec and re-plan.
+  Changes:
+
+  - Work + break are back in scope, configurable via env vars (set in
+  compose.yaml), with second-level granularity for fast demos (e.g.
+  WORK_SECONDS/BREAK_SECONDS, or minutes with a seconds override).
+  - Work→break transition with banner is back in (reuses focus.js's
+  runSession/notify).
+  - Done + Start = restart from the beginning.
+  - Still no UI duration inputs and no sound (visual banner only) — those stay
+  out.
+
+  Let me update the spec (sections 3, 4, 5), then re-spawn the planner to redo
+  the plan and tasks.
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 8 lines, removed 2 lines
+      28    - serves the static UI assets from `public/`, and
+      29    - exposes a tiny JSON API for session state and control:
+      30      `GET /api/state`, `POST /api/start`, `POST /api/pause`, `PO
+          ST /api/reset`.
+      31 -- Server-side session state driven by reused `focus.js` logic (
+         -a single 25-minute                                             
+      32 -  work interval), exposing remaining seconds and status (idle/r
+         -unning/paused/done).                                           
+      31 +- Server-side session state driven by reused `focus.js` logic: 
+         +a work interval                                                
+      32 +  followed by a break interval, exposing remaining seconds, the
+         + current phase                                                 
+      33 +  (work/break), and status (idle/running/paused/done). When the
+         + work interval                                                 
+      34 +  reaches zero, a banner announces the transition and the break
+         + interval begins.                                              
+      35 +- Configurable work and break durations via environment variabl
+         +es (set in                                                     
+      36 +  `compose.yaml`) so a demo can use short durations (e.g. 10s w
+         +ork / 5s break)                                                
+      37 +  without waiting 25 minutes. Defaults are 25-minute work / 5-m
+         +inute break when                                               
+      38 +  unset. Durations are NOT editable from the browser UI.       
+      39  - A single-page UI in `public/` (`index.html` + CSS + a small J
+          S file) that:
+      40    - renders a large `MM:SS` countdown, updating at least once p
+          er second while running,
+      41    - provides Start, Pause, and Reset controls wired to the API,
+           and
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 2 lines, removed 1 line
+      40    - renders a large `MM:SS` countdown, updating at least once p
+          er second while running,
+      41    - provides Start, Pause, and Reset controls wired to the API,
+           and
+      42    - is styled in the Lunatech aesthetic (navy background `#0a1e
+          50`, pink accent
+      43 -    `#db2777`, white text, Poppins with a sans-serif fallback).
+      43 +    `#db2777`, white text, Poppins with a sans-serif fallback),
+         + and shows the                                                 
+      44 +    current phase (Work / Break) plus the transition banner.   
+      45  - Reuse (not reimplementation) of `focus.js`'s countdown semant
+          ics: the server
+      46    drives the work interval through `focus.js` exports (e.g. `ru
+          nInterval` /
+      47    `formatTime`) via injected dependencies; `focus.js` itself is
+           not rewritten.
+
+⏺ Now update the Out of scope section (remove the durations/break exclusions,
+  keep UI-inputs and sound excluded), and Constraints, and Acceptance Criteria.
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 6 lines, removed 4 lines
+      51  
+      52  ### Out of scope
+      53  
+      54 -- No break interval and no work→break transition in v1 (work in
+         -terval only).                                                  
+      55 -- No configurable work/break durations in the UI (fixed 25-minu
+         -te work interval);                                             
+      56 -  duration controls are deferred to a follow-up.               
+      57 -- No sound / terminal bell / browser notifications in v1 (visua
+         -l countdown only).                                             
+      54 +- No duration controls in the browser UI: work/break durations 
+         +are configured                                                 
+      55 +  only via environment variables (Compose file), not editable f
+         +rom the page.                                                  
+      56 +- No "long break" every 4th interval, and no repeating multi-cy
+         +cle loop: a                                                    
+      57 +  single work then break sequence per session (Start may restar
+         +t it).                                                         
+      58 +- No sound / terminal bell / browser audio notifications in v1:
+         + the work-to-break                                             
+      59 +  transition is announced by an on-screen banner only (visual, 
+         +no audio).                                                     
+      60  - No persistence, history, statistics, accounts, or multi-sessi
+          on support.
+      61  - No external runtime dependencies, build step, bundler, or fra
+          mework (no npm
+      62    install): standard-library Node plus hand-written HTML/CSS/JS
+           only.
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 13 lines, removed 2 lines
+      74    driving the countdown with the existing injectable-scheduler 
+          pattern rather
+      75    than reimplementing the timer in the browser.
+      76  - The server holds a single in-memory session (one user, local 
+          use). State is
+      77 -  exposed as JSON: `{ remainingSeconds, totalSeconds, status }`
+         - where `status`                                                
+      78 -  is one of `idle | running | paused | done`.                  
+      77 +  exposed as JSON: `{ remainingSeconds, totalSeconds, phase, st
+         +atus }` where                                                  
+      78 +  `phase` is one of `work | break` and `status` is one of      
+      79 +  `idle | running | paused | done`. `totalSeconds` reflects the
+         + duration of the                                               
+      80 +  current phase.                                               
+      81 +- Work and break durations come from environment variables read
+         + at startup:                                                   
+      82 +  `WORK_SECONDS` and `BREAK_SECONDS` (whole seconds, for fast d
+         +emos). When                                                    
+      83 +  unset, defaults are 1500 (25 min) work and 300 (5 min) break.
+         + Invalid values                                                
+      84 +  (non-positive or non-integer) fall back to the defaults with 
+         +a logged warning;                                              
+      85 +  they do not crash the server.                                
+      86 +- Lifecycle: a session runs the work phase, then on reaching ze
+         +ro announces a                                                 
+      87 +  transition banner and runs the break phase; when the break re
+         +aches zero the                                                 
+      88 +  status is `done`. Pressing Start while `done` restarts from t
+         +he work phase at                                               
+      89 +  the configured durations. Pause/resume and Reset apply throug
+         +hout.                                                          
+      90  - The browser polls `GET /api/state` on an interval (at least o
+          nce per second)
+      91    to render the countdown; control buttons issue `POST` request
+          s. No WebSocket
+      92    is required.
+
+⏺ Now the constraint about reuse should mention runSession/notify, and the
+  Compose constraint should mention passing the env vars. Let me update those
+  and then the acceptance criteria.
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 4 lines, removed 1 line
+      72    dependencies and no build/bundler step. UI assets are plain s
+          tatic files.
+      73  - The server reuses `focus.js` via `require('../focus.js')` (or
+           equivalent),
+      74    driving the countdown with the existing injectable-scheduler 
+          pattern rather
+      75 -  than reimplementing the timer in the browser.                
+      75 +  than reimplementing the timer in the browser. The work-then-b
+         +reak sequence and                                              
+      76 +  the transition reuse `focus.js` semantics (e.g. `runInterval`
+         +, `formatTime`,                                                
+      77 +  and the `notify` banner text via `runSession`'s pattern) rath
+         +er than                                                        
+      78 +  reimplementing them.                                         
+      79  - The server holds a single in-memory session (one user, local 
+          use). State is
+      80    exposed as JSON: `{ remainingSeconds, totalSeconds, phase, st
+          atus }` where
+      81    `phase` is one of `work | break` and `status` is one of
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 3 lines, removed 1 line
+       98    file publishes this port to the host so the browser can reac
+           h it.
+       99  - Containerization uses a stock official Node base image (no e
+           xtra runtime
+      100    dependencies installed, since the app is stdlib only). `dock
+           er compose up`
+      101 -  builds and starts the app with a single command and no furth
+          -er setup.                                                     
+      101 +  builds and starts the app with a single command and no furth
+          +er setup. The                                                 
+      102 +  Compose file sets `WORK_SECONDS` and `BREAK_SECONDS` (with s
+          +hort demo values)                                             
+      103 +  so durations are easy to change in one place for a demonstra
+          +tion.                                                         
+      104  - Styling tokens (from lunatech.com): primary accent pink `#db
+           2777`, deep navy
+      105    background `#0a1e50` (with darker `#081a47` accents), white 
+           `#ffffff` text,
+      106    muted grey `#c5c5c5`; font Poppins with `sans-serif` fallbac
+           k. Fonts loaded
+
+⏺ Now the acceptance criteria. AC2 (initial state) needs phase, and I'll add new
+  ACs for the transition, env-config durations, and done→restart. Let me
+  rewrite the AC block.
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 6 lines, removed 5 lines
+      113  - [ ] AC1 (serve): Given the server is started, when a client 
+           sends
+      114    `GET /`, then the server responds 200 with an HTML document 
+           that references
+      115    the UI's CSS and JS assets, and those asset requests also re
+           turn 200.
+      116 -- [ ] AC2 (initial state): Given a freshly started server, whe
+          -n a client sends                                              
+      117 -  `GET /api/state`, then it returns 200 with JSON             
+      118 -  `{ remainingSeconds: 1500, totalSeconds: 1500, status: "idle
+          -" }`                                                          
+      116 +- [ ] AC2 (initial state): Given a freshly started server with
+          + default                                                      
+      117 +  durations, when a client sends `GET /api/state`, then it ret
+          +urns 200 with JSON                                            
+      118 +  `{ remainingSeconds: 1500, totalSeconds: 1500, phase: "work"
+          +, status: "idle" }`                                           
+      119    (25-minute work interval, not yet started).
+      120  - [ ] AC3 (start counts down): Given an idle session, when a c
+           lient sends
+      121    `POST /api/start` and then polls `GET /api/state` after time
+            passes, then
+      122 -  `status` becomes `"running"` and `remainingSeconds` decrease
+          -s over time                                                   
+      123 -  (strictly less than 1500 on a later poll), at a rate of abou
+          -t one per second.                                             
+      122 +  `status` becomes `"running"`, `phase` is `"work"`, and `rema
+          +iningSeconds`                                                 
+      123 +  decreases over time (strictly less than the work total on a 
+          +later poll), at a                                             
+      124 +  rate of about one per second.                               
+      125  - [ ] AC4 (pause/resume): Given a running session, when a clie
+           nt sends
+      126    `POST /api/pause`, then `status` becomes `"paused"` and `rem
+           ainingSeconds`
+      127    stops decreasing across subsequent polls; when a client then
+            sends
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 17 lines, removed 2 lines
+      128    `POST /api/start`, then `status` returns to `"running"` and 
+           the countdown
+      129    resumes from the paused value.
+      130  - [ ] AC5 (reset): Given a running or paused session, when a c
+           lient sends
+      131 -  `POST /api/reset`, then `status` returns to `"idle"` and `re
+          -mainingSeconds`                                               
+      132 -  returns to `1500`.                                          
+      131 +  `POST /api/reset`, then `status` returns to `"idle"`, `phase
+          +` returns to                                                  
+      132 +  `"work"`, and `remainingSeconds` returns to the work total. 
+      133 +- [ ] AC5a (work to break transition): Given a running session
+          + whose work phase                                             
+      134 +  reaches zero, when polled, then `phase` becomes `"break"`, `
+          +remainingSeconds`                                             
+      135 +  resets to the break total, the session keeps running through
+          + the break, and a                                             
+      136 +  transition banner (the `focus.js` work-complete banner text)
+          + is available in                                              
+      137 +  the state or rendered by the UI. When the break phase reache
+          +s zero, `status`                                              
+      138 +  becomes `"done"`.                                           
+      139 +- [ ] AC5b (env-configured durations): Given the server is sta
+          +rted with                                                     
+      140 +  `WORK_SECONDS=10` and `BREAK_SECONDS=5`, when a client polls
+          + `GET /api/state`                                             
+      141 +  before starting, then `totalSeconds` and `remainingSeconds` 
+          +are `10`                                                      
+      142 +  (`phase: "work"`); after starting and the work phase elapses
+          +, the break total                                             
+      143 +  is `5`. Given invalid values (e.g. `WORK_SECONDS=abc` or `-1
+          +`), the server                                                
+      144 +  falls back to the defaults and still starts.                
+      145 +- [ ] AC5c (done then restart): Given a session with `status: 
+          +"done"`, when a                                               
+      146 +  client sends `POST /api/start`, then the session restarts fr
+          +om the work phase                                             
+      147 +  at the configured work total with `status: "running"`.      
+      148  - [ ] AC6 (reuse): Given the codebase, when the server's timer
+            behavior is
+      149    inspected, then it drives the countdown through `focus.js` e
+           xports (e.g.
+      150    `formatTime` and/or `runInterval`) rather than reimplementin
+           g the MM:SS
+
+⏺ Now update AC6 (reuse — mention runSession/notify), AC7 (phase + banner
+  display), and AC8 (env vars in compose). Then re-spawn the planner.
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 7 lines, removed 5 lines
+      146    client sends `POST /api/start`, then the session restarts fr
+           om the work phase
+      147    at the configured work total with `status: "running"`.
+      148  - [ ] AC6 (reuse): Given the codebase, when the server's timer
+            behavior is
+      149 -  inspected, then it drives the countdown through `focus.js` e
+          -xports (e.g.                                                  
+      150 -  `formatTime` and/or `runInterval`) rather than reimplementin
+          -g the MM:SS                                                   
+      151 -  formatting and per-second counting independently.           
+      149 +  inspected, then it drives the countdown and the work-to-brea
+          +k transition                                                  
+      150 +  through `focus.js` exports (e.g. `formatTime`, `runInterval`
+          +, and the `notify`                                            
+      151 +  banner text) rather than reimplementing the MM:SS formatting
+          +, per-second                                                  
+      152 +  counting, or banner text independently.                     
+      153  - [ ] AC7 (styling): Given the rendered page, when the UI is i
+           nspected, then it
+      154    uses the Lunatech tokens (navy background `#0a1e50`, pink ac
+           cent `#db2777`,
+      154 -  Poppins font with sans-serif fallback) and shows a large `MM
+          -:SS` countdown                                                
+      155 -  with Start, Pause, and Reset controls.                      
+      155 +  Poppins font with sans-serif fallback) and shows a large `MM
+          +:SS` countdown,                                               
+      156 +  the current phase (Work / Break), the transition banner, and
+          + Start, Pause, and                                            
+      157 +  Reset controls.                                             
+      158  
+      159  - [ ] AC8 (container): Given a `Dockerfile` and `compose.yaml`
+            at the repo root,
+      160    when a user runs `docker compose up` (single command, no pri
+           or setup), then
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 4 lines, removed 3 lines
+      160    when a user runs `docker compose up` (single command, no pri
+           or setup), then
+      161    the image builds, the container starts the server, the confi
+           gured port is
+      162    published to the host, and `GET /` plus `GET /api/state` suc
+           ceed against the
+      163 -  host port (same responses as AC1 and AC2). Verification of t
+          -he build/run may                                              
+      164 -  use `docker compose config` / build if a Docker daemon is un
+          -available in the                                              
+      165 -  test environment.                                           
+      163 +  host port. The Compose file sets `WORK_SECONDS` and `BREAK_S
+          +ECONDS` so the                                                
+      164 +  demo durations are visible and editable in one place. Verifi
+          +cation of the                                                 
+      165 +  build/run may use `docker compose config` / build if a Docke
+          +r daemon is                                                   
+      166 +  unavailable in the test environment.                        
+      167  
+      168  ## 6. Task Breakdown
+      169  
+
+⏺ Spec amended. Now re-spawning the planner to redo plan.md and the section-6
+  task breakdown against the expanded scope.
+
+⏺ spec-swarm:sdd-planner(Re-plan focus web UI (expanded))
+  ⎿  Done (13 tool uses · 57.3k tokens · 4m 10s)
+  (ctrl+o to expand)
+
+⏺ The em dash in the title (line 1) was pre-existing — I'll fix that since org
+  instructions forbid em dashes. Let me review the revised plan's reuse approach
+  and the new task breakdown, then fix the title.
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 1 line, removed 1 line
+      1 -# Feature Spec: Focus Web UI — a simple, pretty browser timer   
+      1 +# Feature Spec: Focus Web UI - a simple, pretty browser timer   
+      2  
+      3  > Status: SPECIFIED
+      4  > Spec folder: specs/002-focus-web-ui/
+
+⏺ Now let me read the revised task breakdown (section 6) and the section 7 open
+  question the planner flagged.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ The revised breakdown is thorough, test-first, and every AC (1–8, including
+  5a/5b/5c) maps to tasks. The reuse is honest in both phases and the banner
+  text is sourced from focus.js's notify rather than hardcoded. The planner's
+  only open question is minor (the optional banner field).
+
+  GATE 2 — Revised plan review
+
+  Technical approach (revised for work + break + env durations):
+  - Thin stdlib server.js wrapping a single in-memory lib/session.js. Reads
+  WORK_SECONDS/BREAK_SECONDS/PORT from env at startup, logs the bound port.
+  - Two-phase lifecycle with a phase field: { remainingSeconds, totalSeconds, 
+  phase, status, banner? }. Work runs → at zero sets the banner + switches to
+  break (still running) → break zero = done. Start from done restarts.
+  - Honest focus.js reuse, two-fold (AC6): per-second decrement in both phases
+  driven by runInterval via a server-owned scheduler; MM:SS via formatTime; the
+  banner text is captured by calling focus.js's notify with a capturing sink
+  (not hardcoded). runSession can't be reused directly (no pause/query), so the
+  server sequences two runIntervals itself.
+  - Env durations with safe fallback (AC5b): pure parseDurations(env) validates
+  (same ^\d+$ + >0 shape as focus.js), falls back to 1500/300 with a logged
+  warning, never crashes.
+  - Static UI shows phase + banner; container's compose.yaml sets the two
+  duration env vars in one place.
+
+  Tasks (sequential, test-first):
+
+  ┌──────┬────────────────────────────────────────────┬──────────────────────┐
+  │ Task │                   Title                    │       Verifies       │
+  ├──────┼────────────────────────────────────────────┼──────────────────────┤
+  │ T1   │ Failing session unit tests (phase,         │ AC2,3,4,5,5a,5b,5c,6 │
+  │      │ transition, env)                           │                      │
+  ├──────┼────────────────────────────────────────────┼──────────────────────┤
+  │ T2   │ Implement lib/session.js reusing focus.js  │ AC2,3,4,5,5a,5b,5c,6 │
+  ├──────┼────────────────────────────────────────────┼──────────────────────┤
+  │ T3   │ Failing HTTP integration tests             │ AC1,2,3,4,5,5a,5b,5c │
+  ├──────┼────────────────────────────────────────────┼──────────────────────┤
+  │ T4   │ Implement server.js                        │ AC1,2,3,4,5,5a,5b,5c │
+  ├──────┼────────────────────────────────────────────┼──────────────────────┤
+  │ T5   │ Static UI in public/ (Lunatech, phase +    │ AC1,7                │
+  │      │ banner)                                    │                      │
+  ├──────┼────────────────────────────────────────────┼──────────────────────┤
+  │ T6   │ Dockerfile + compose.yaml (sets WORK/BREAK │ AC8                  │
+  │      │  seconds)                                  │                      │
+  └──────┴────────────────────────────────────────────┴──────────────────────┘
+
+  Planner's open question for you: the state JSON would carry an optional banner
+  field (null until the work→break transition) so the UI can render the
+  focus.js banner text. AC2 only lists four fields, but tests will assert those
+  four explicitly so the extra field doesn't break AC2. I think keeping banner
+  as a documented field is the right call — it's how the UI gets the transition
+  text honestly from focus.js. I'll lock it that way unless you object.
+
+  ---
+  Reply approve to lock the plan and start implementing (T1 → T6, one task at a
+  time, each verified by the critic and committed on PASS), or tell me what to
+  change.
+
+✻ Worked for 6m 5s
+
+❯ approve                                                                       
+
+⏺ Gate 2 approved. Locking the plan: setting Status to PLANNED and committing
+  plan.md + the task breakdown as the baseline.
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 1 line, removed 1 line
+      1  # Feature Spec: Focus Web UI - a simple, pretty browser timer
+      2  
+      3 -> Status: SPECIFIED                                             
+      3 +> Status: PLANNED                                               
+      4  > Spec folder: specs/002-focus-web-ui/
+      5  
+      6  ## 1. Mission / Why
+
+⏺ Let me create the journal and commit the Gate 2 baseline. First, ensure the
+  working tree is clean before implementation begins.
+
+⏺ Write(specs/002-focus-web-ui/journal.md)
+  ⎿  Wrote 31 lines to specs/002-focus-web-ui/journal.md
+       2 # Journal: 002-focus-web-ui
+       3 Append-only log of decisions, drift, and critic verdicts.
+       4 
+       6 ## Gate 1 (SPECIFIED)
+       7 - Spec approved. Architecture pinned: Node stdlib server reusing
+          focus.js,
+         7, Poppins).N state, Lunatech styling (navy #0a1e50, pink #db277
+       9 - User addition during Gate 1: Dockerfile + compose.yaml for one
+         -command
+      10   `docker compose up`, local demo only, no auth. Added AC8.
+     … +32 lines (ctrl+o to expand)
+
+⏺ Bash(git add specs/002-focus-web-ui/ && git commit -q -m "spec
+      002-focus-web-ui: plan + tasks (Gate 2 approved)…)
+  ⎿  --- clean tree, ready for T1 ---
+
+⏺ Baseline committed, tree clean. Now Phase 3 — IMPLEMENT. Starting with T1
+  (failing session unit tests). One task per spawn.
+⏺ spec-swarm:sdd-implementer(T1: failing session unit tests)
+  ⎿  Done (8 tool uses · 54.0k tokens · 4m 12s)
+  (ctrl+o to expand)
+
+⏺ T1 implementer reports done. Now spawning the critic to verify T1.
+
+⏺ spec-swarm:sdd-critic(Critic: verify T1)
+  ⎿  Done (7 tool uses · 32.5k tokens · 1m 1s)
+  (ctrl+o to expand)
+
+⏺ T1 PASS. Ticking the checkbox, logging the verdict, and committing.
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 1 line, removed 1 line
+      175  > exports (`formatTime`, `runInterval`, and the `notify` banne
+           r text);
+      176  > `focus.js` is not modified.
+      177  
+      178 -### T1: Failing unit tests for the session model (incl. phase,
+          - transition, env config)                                      
+      178 +### [x] T1: Failing unit tests for the session model (incl. ph
+          +ase, transition, env config)                                  
+      179  
+      180  - **Does:** create `test/session.test.js` with `node:test` + `
+           node:assert`,
+      181    written against the `lib/session.js` contract in plan.md. Co
+           ver, with an
+
+⏺ Update(specs/002-focus-web-ui/journal.md)
+  ⎿  Added 6 lines, removed 1 line
+      28  
+      29  ## Implementation verdicts
+      30  
+      31 -(appended per task below)                                      
+      31 +- T1 (failing session unit tests): critic PASS. test/session.te
+         +st.js only, no                                                 
+      32 +  production code. Fails cleanly (MODULE_NOT_FOUND on lib/sessi
+         +on.js), all ACs                                                
+      33 +  asserted, banner sourced from focus.js notify, injectable sch
+         +eduler. The test                                               
+      34 +  defines the concrete lib/session.js contract: createSession({
+         + durations,                                                    
+      35 +  scheduler }), scheduler shape { scheduleTick, tick, pending }
+         +, parseDurations                                               
+      36 +  returning { workSeconds, breakSeconds }. T2 is bound to this 
+         +contract.                                                      
+
+⏺ Bash(git add -A && git commit -q -m "T1: Failing session unit tests (critic
+      PASS)…)
+  ⎿  8f3c1cd T1: Failing session unit tests (critic PASS)
+
+⏺ T1 done ✓ (critic PASS, committed 8f3c1cd). Failing session tests in place,
+  defining the lib/session.js contract.
+
+  Now T2 — implement lib/session.js to make T1 pass, reusing focus.js.
+
+⏺ spec-swarm:sdd-implementer(T2: implement lib/session.js)
+  ⎿  Done (9 tool uses · 52.0k tokens · 3m 20s)
+  (ctrl+o to expand)
+
+⏺ T2 implementer reports green. Spawning the critic to verify independently.
+
+⏺ spec-swarm:sdd-critic(Critic: verify T2)
+  ⎿  Done (12 tool uses · 42.9k tokens · 1m 4s)
+  (ctrl+o to expand)
+
+⏺ T2 PASS. Reuse confirmed genuine. Ticking, logging, committing.
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 1 line, removed 1 line
+      198  - verifies: AC2, AC3, AC4, AC5, AC5a, AC5b, AC5c, AC6
+      199  - depends_on: none
+      200  
+      201 -### T2: Implement `lib/session.js` reusing focus.js (make T1 p
+          -ass)                                                          
+      201 +### [x] T2: Implement `lib/session.js` reusing focus.js (make 
+          +T1 pass)                                                      
+      202  
+      203  - **Does:** create `lib/session.js`. Import `formatTime`, `run
+           Interval`, and
+      204    `notify` from `../focus.js`. Provide a pure `parseDurations(
+           env)` that
+
+⏺ Update(specs/002-focus-web-ui/journal.md)
+  ⎿  Added 8 lines
+      34    defines the concrete lib/session.js contract: createSession({
+           durations,
+      35    scheduler }), scheduler shape { scheduleTick, tick, pending }
+          , parseDurations
+      36    returning { workSeconds, breakSeconds }. T2 is bound to this 
+          contract.
+      37 +- T2 (implement lib/session.js): critic PASS. Only lib/session.
+         +js added; tests                                                
+      38 +  14 pass, full suite 33 pass, no regressions. AC6 reuse confir
+         +med genuine:                                                   
+      39 +  counting flows through focus.js runInterval for both phases (
+         +remaining parsed                                               
+      40 +  from runInterval's rendered frame, no parallel counter), bann
+         +er sourced from                                                
+      41 +  focus.js notify('Work'), no reimplemented formatter. parseDur
+         +ations validates                                               
+      42 +  and falls back correctly. Transition runs synchronously insid
+         +e the write sink                                               
+      43 +  (runInterval's Promise resolves async; tests fire ticks synch
+         +ronously) -                                                    
+      44 +  permitted by plan's adapter allowance.                       
+
+⏺ Bash(git add -A && git commit -q -m "T2: Implement lib/session.js reusing
+      focus.js (critic PASS)…)
+  ⎿  9a2cff9 T2: Implement lib/session.js reusing focus.js (critic PASS)
+
+⏺ T2 done ✓ (committed 9a2cff9). Session model works, tests green (33 total).
+
+  Now T3 — failing HTTP integration tests for the server.
+
+⏺ spec-swarm:sdd-implementer(T3: failing HTTP server tests)
+  ⎿  Done (11 tool uses · 59.1k tokens · 1m 46s)
+  (ctrl+o to expand)
+
+⏺ T3 implementer done. Spawning critic.
+
+⏺ spec-swarm:sdd-critic(Critic: verify T3)
+  ⎿  Done (10 tool uses · 36.2k tokens · 59s)
+  (ctrl+o to expand)
+
+⏺ T3 PASS. Ticking, logging, committing.
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 1 line, removed 1 line
+      221  - verifies: AC2, AC3, AC4, AC5, AC5a, AC5b, AC5c, AC6
+      222  - depends_on: T1
+      223  
+      224 -### T3: Failing HTTP integration tests for the server (incl. t
+          -ransition, env, restart)                                      
+      224 +### [x] T3: Failing HTTP integration tests for the server (inc
+          +l. transition, env, restart)                                  
+      225  
+      226  - **Does:** create `test/server.test.js`. Start the server via
+            a factory that
+      227    accepts an injectable scheduler AND injectable durations/env
+           , on an ephemeral
+
+⏺ Update(specs/002-focus-web-ui/journal.md)
+  ⎿  Added 7 lines
+      42    and falls back correctly. Transition runs synchronously insid
+          e the write sink
+      43    (runInterval's Promise resolves async; tests fire ticks synch
+          ronously) -
+      44    permitted by plan's adapter allowance.
+      45 +- T3 (failing HTTP integration tests): critic PASS. Only test/s
+         +erver.test.js                                                  
+      46 +  added; fails cleanly (MODULE_NOT_FOUND on server.js), full su
+         +ite 34/33/1.                                                   
+      47 +  All ACs (1,2,3,4,5,5a,5b,5c) have real assertions; ephemeral 
+         +port listen(0),                                                
+      48 +  injected manual scheduler, clean teardown. Documents server f
+         +actory contract                                                
+      49 +  for T4: createServer({ env, scheduler }) -> { server, listen,
+         + close }; routes                                               
+      50 +  GET / /styles.css /app.js /api/state, POST /api/start|pause|r
+         +eset; must not                                                 
+      51 +  arm a real timer when a scheduler is injected.               
+
+⏺ Bash(git add -A && git commit -q -m "T3: Failing HTTP integration tests
+      (critic PASS)…)
+  ⎿  0d0655a T3: Failing HTTP integration tests (critic PASS)
+
+⏺ T3 done ✓ (committed 0d0655a). Now T4 — implement server.js to make the HTTP
+  tests pass.
+
+⏺ spec-swarm:sdd-implementer(T4: implement server.js)  ⎿  Done (16 tool uses · 64.6k tokens · 5m 45s)
+  (ctrl+o to expand)
+
+⏺ T4 implementer done — 41 tests pass. It created minimal placeholder public/
+  files (flagged for T5 to replace) since AC1 needs real files to return 200.
+  That's a reasonable boundary call. Let me spawn the critic, noting the
+  placeholder situation.
+
+⏺ spec-swarm:sdd-critic(Critic: verify T4)
+  ⎿  Done (18 tool uses · 43.9k tokens · 2m 55s)
+  (ctrl+o to expand)
+
+⏺ T4 PASS. server.js is correct, placeholders minimal and flagged. Ticking,
+  logging, committing.
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 1 line, removed 1 line
+      246  - verifies: AC1, AC2, AC3, AC4, AC5, AC5a, AC5b, AC5c
+      247  - depends_on: T2
+      248  
+      249 -### T4: Implement `server.js` (make T3 pass)                  
+      249 +### [x] T4: Implement `server.js` (make T3 pass)              
+      250  
+      251  - **Does:** create `server.js` using `node:http`/`node:fs`/`no
+           de:path` only.
+      252    Expose a factory (e.g. `createServer({ env, scheduler })`) h
+           olding one
+
+⏺ Update(specs/002-focus-web-ui/journal.md)
+  ⎿  Added 7 lines
+      49    for T4: createServer({ env, scheduler }) -> { server, listen,
+           close }; routes
+      50    GET / /styles.css /app.js /api/state, POST /api/start|pause|r
+          eset; must not
+      51    arm a real timer when a scheduler is injected.
+      52 +- T4 (implement server.js): critic PASS. server.js (stdlib only
+         +) + THREE minimal                                              
+      53 +  PLACEHOLDER public files (index.html/styles.css/app.js) creat
+         +ed so AC1's 200                                                
+      54 +  checks pass; placeholders flagged and do NOT contain Lunatech
+         + tokens, so T5                                                 
+      55 +  (real UI) is still required and must replace them. Full suite
+         + 41 pass.                                                      
+      56 +  Factory + scheduler injection + routes + MIME + path-traversa
+         +l guard + module                                               
+      57 +  guard all verified live; production ~1s scheduler unref'd + c
+         +leared, no timer                                               
+      58 +  leak after done/close. Contract tests unchanged.             
+
+⏺ Bash(git add -A && git commit -q -m "T4: Implement server.js + placeholder
+      public files (critic PASS)…)
+  ⎿  1e61dee T4: Implement server.js + placeholder public files (critic PAS
+     S)
+
+⏺ T4 done ✓ (committed 1e61dee). Server works end-to-end, 41 tests pass.
+
+  Now T5 — the real Lunatech-styled UI in public/, replacing the placeholders.
+  This is the design-heavy task, so I'll direct the implementer to apply the
+  artifact-design principles and use the exact Lunatech tokens.
+
+⏺ spec-swarm:sdd-implementer(T5: build Lunatech-styled UI)
+  ⎿  Done (15 tool uses · 61.7k tokens · 6m 12s)
+  (ctrl+o to expand)
+
+⏺ T5 implementer done — full UI with a canvas progress ring, 41 tests still
+  pass. The spec calls for "clean & simple" — the progress ring is a tasteful
+  extra but the critic should confirm it doesn't violate scope. Let me spawn the
+  critic to verify AC1 + AC7.
+
+⏺ spec-swarm:sdd-critic(Critic: verify T5)
+  ⎿  Done (9 tool uses · 32.8k tokens · 5m 0s)
+  (ctrl+o to expand)
+
+⏺ T5 PASS. Ticking, logging, committing.
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 1 line, removed 1 line
+      264  - verifies: AC1, AC2, AC3, AC4, AC5, AC5a, AC5b, AC5c
+      265  - depends_on: T3
+      266  
+      267 -### T5: Build the static UI in `public/` (Lunatech styling, ph
+          -ase + banner)                                                 
+      267 +### [x] T5: Build the static UI in `public/` (Lunatech styling
+          +, phase + banner)                                             
+      268  
+      269  - **Does:** create `public/index.html`, `public/styles.css`, `
+           public/app.js`.
+      270    Centered card on navy `#0a1e50` (darker `#081a47` accents), 
+           pink `#db2777`
+
+⏺ Update(specs/002-focus-web-ui/journal.md)
+  ⎿  Added 7 lines
+      56    Factory + scheduler injection + routes + MIME + path-traversa
+          l guard + module
+      57    guard all verified live; production ~1s scheduler unref'd + c
+          leared, no timer
+      58    leak after done/close. Contract tests unchanged.
+      59 +- T5 (real Lunatech UI in public/): critic PASS. Only the three
+         + public files                                                  
+      60 +  changed; suite 41 pass. AC7 tokens (#0a1e50/#db2777/#ffffff/#
+         +c5c5c5) literal,                                               
+      61 +  Poppins-first font stack, no external fetch (no Google Fonts/
+         +CDN/@import).                                                  
+      62 +  Four UI elements + three controls present; banner rendered fr
+         +om state.banner                                                
+      63 +  (not hardcoded); app.js polls /api/state every 1s and wires t
+         +he POST routes.                                                
+      64 +  Tasteful extra: self-contained canvas progress ring behind th
+         +e text MM:SS                                                   
+      65 +  (does not replace it), native canvas only, no deps. No em das
+         +hes.                                                           
+
+⏺ Bash(git add -A && git commit -q -m "T5: Real Lunatech-styled UI in public/
+      (critic PASS)…)
+  ⎿  318cfb9 T5: Real Lunatech-styled UI in public/ (critic PASS)
+
+⏺ T5 done ✓ (committed 318cfb9). The pretty UI is live. Now the final task, T6 —
+  Dockerfile + compose.yaml with the demo durations.
+
+⏺ spec-swarm:sdd-implementer(T6: Dockerfile + compose.yaml)
+  ⎿  Done (9 tool uses · 45.3k tokens · 1m 37s)
+  (ctrl+o to expand)
+
+⏺ T6 implementer done. Spawning the critic to verify AC8.
+
+⏺ spec-swarm:sdd-critic(Critic: verify T6)
+  ⎿  Done (17 tool uses · 31.8k tokens · 2m 11s)
+  (ctrl+o to expand)
+
+⏺ T6 PASS — and the critic even ran a real container build via podman,
+  confirming AC8 end-to-end (host returned the WORK_SECONDS=10 state). Ticking
+  the final task, logging, and committing.
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 1 line, removed 1 line
+      285  - verifies: AC1, AC7
+      286  - depends_on: T4
+      287  
+      288 -### T6: Containerization: Dockerfile + compose.yaml (with WORK
+          -_SECONDS/BREAK_SECONDS)                                       
+      288 +### [x] T6: Containerization: Dockerfile + compose.yaml (with 
+          +WORK_SECONDS/BREAK_SECONDS)                                   
+      289  
+      290  - **Does:** create `Dockerfile` (stock official Node base imag
+           e, e.g.
+      291    `node:22-alpine` or `node:22-slim`; copy source; no installe
+           d runtime deps;
+
+⏺ All six tasks complete. Setting Status to DONE, logging the final verdict,
+  then committing T6.
+
+⏺ Update(specs/002-focus-web-ui/spec.md)
+  ⎿  Added 1 line, removed 1 line
+      1  # Feature Spec: Focus Web UI - a simple, pretty browser timer
+      2  
+      3 -> Status: PLANNED                                               
+      3 +> Status: DONE                                                  
+      4  > Spec folder: specs/002-focus-web-ui/
+      5  
+      6  ## 1. Mission / Why
+
+⏺ Update(specs/002-focus-web-ui/journal.md)
+  ⎿  Added 14 lines
+      63    (not hardcoded); app.js polls /api/state every 1s and wires t
+          he POST routes.
+      64    Tasteful extra: self-contained canvas progress ring behind th
+          e text MM:SS
+      65    (does not replace it), native canvas only, no deps. No em das
+          hes.
+      66 +- T6 (Dockerfile + compose.yaml + .dockerignore): critic PASS. 
+         +Only the three                                                 
+      67 +  container files added; suite 41 pass. Critic ran a REAL build
+         +/run via podman:                                               
+      68 +  image built from node:22-alpine, container served host GET / 
+         +(200) and                                                      
+      69 +  GET /api/state (200 with {remainingSeconds:10,...} confirming
+         + WORK_SECONDS=10                                               
+      70 +  flows through), clean teardown. Dockerfile copies focus.js+li
+         +b+public+server,                                               
+      71 +  no deps, CMD node server.js. compose build:. ports 3000:3000,
+         + env                                                           
+      72 +  WORK_SECONDS/BREAK_SECONDS spelled correctly. .dockerignore k
+         +eeps runtime                                                   
+      73 +  files. No em dashes.                                         
+      74 +                                                               
+      75 +## Phase 4 (DONE)                                              
+      76 +                                                               
+      77 +- All six tasks complete and critic-verified. Status set to DON
+         +E. No spec drift                                               
+      78 +  recorded during implementation; the only spec change was the 
+         +user's Gate-2                                                  
+      79 +  scope amendment (work+break + env durations), agreed before p
+         +lanning.                                                       
+
+⏺ Bash(git add -A && git commit -q -m "T6: Dockerfile + compose.yaml +
+      .dockerignore (critic PASS)…)
+  ⎿  === log ===
+     d2c7ddd T6: Dockerfile + compose.yaml + .dockerignore (critic PASS)
+     318cfb9 T5: Real Lunatech-styled UI in public/ (critic PASS)
+     … +13 lines (ctrl+o to expand)
+⏺ All six tasks complete, every one critic-verified and committed. Full suite
+  green (0 failures).
+
+  Phase 4 — PRESENT
+
+  Focus Web UI is done. A simple, pretty browser timer for focus.js, styled
+  after lunatech.com, served by a Node stdlib server and runnable with one
+  command.
+
+  Acceptance criteria — all verified
+
+  ┌──────┬────────────────────────────────────────┬─────────────────────────┐
+  │  AC  │                  What                  │         Status          │
+  ├──────┼────────────────────────────────────────┼─────────────────────────┤
+  │ AC1  │ GET / + assets return 200              │ ✅ (T3/T4, live-tested) │
+  ├──────┼────────────────────────────────────────┼─────────────────────────┤
+  │ AC2  │ Initial state                          │ ✅                      │
+  │      │ {1500,1500,"work","idle"}              │                         │
+  ├──────┼────────────────────────────────────────┼─────────────────────────┤
+  │ AC3  │ Start counts down ~1/sec               │ ✅                      │
+  ├──────┼────────────────────────────────────────┼─────────────────────────┤
+  │ AC4  │ Pause freezes, resume continues        │ ✅                      │
+  ├──────┼────────────────────────────────────────┼─────────────────────────┤
+  │ AC5  │ Reset returns to idle/work/1500        │ ✅                      │
+  ├──────┼────────────────────────────────────────┼─────────────────────────┤
+  │ AC5a │ Work→break transition + banner, then   │ ✅                      │
+  │      │ done                                   │                         │
+  ├──────┼────────────────────────────────────────┼─────────────────────────┤
+  │ AC5b │ WORK_SECONDS/BREAK_SECONDS env config  │ ✅                      │
+  │      │ + invalid fallback                     │                         │
+  ├──────┼────────────────────────────────────────┼─────────────────────────┤
+  │ AC5c │ Start from done restarts               │ ✅                      │
+  ├──────┼────────────────────────────────────────┼─────────────────────────┤
+  │      │ Genuinely reuses focus.js              │ ✅ (critic-inspected,   │
+  │ AC6  │ (runInterval, formatTime, notify       │ not a fig leaf)         │
+  │      │ banner)                                │                         │
+  ├──────┼────────────────────────────────────────┼─────────────────────────┤
+  │ AC7  │ Lunatech tokens + Poppins + MM:SS +    │ ✅                      │
+  │      │ phase + banner + 3 controls            │                         │
+  ├──────┼────────────────────────────────────────┼─────────────────────────┤
+  │ AC8  │ docker compose up builds + runs +      │ ✅ (real build run via  │
+  │      │ publishes port                         │ podman)                 │
+  └──────┴────────────────────────────────────────┴─────────────────────────┘
+
+  What was built
+
+  - lib/session.js — two-phase session model, countdown driven through focus.js
+  - server.js — stdlib HTTP server, 4 JSON routes + static serving, injectable
+  scheduler
+  - public/index.html / styles.css / app.js — navy + pink Poppins UI, large
+  MM:SS, phase label, transition banner, Start/Pause/Reset, tasteful canvas
+  progress ring
+  - Dockerfile + compose.yaml + .dockerignore — one-command containerized demo
+  with demo durations (WORK_SECONDS=10, BREAK_SECONDS=5) set in compose
+
+  Out of scope — correctly not built
+
+  No UI duration inputs, no sound/audio, no long-break cycling, no
+  persistence/accounts, no external deps/build step, no auth/HTTPS/hardening.
+
+  Spec drift
+
+  None during implementation. The only spec change was your Gate-2 scope
+  addition (work+break + env durations + compose), agreed before planning.
+
+  How to run it
+
+  - Locally: node server.js then open http://localhost:3000
+  - Containerized demo: docker compose up (fast 10s work / 5s break; edit
+  compose.yaml to change)
+  - Tests: node --test (41 passing)
+
+  Suggested next steps
+
+  - Edit compose.yaml durations to whatever suits your demo, or set
+  WORK_SECONDS/BREAK_SECONDS to real values (1500/300) for actual use.
+  - Possible follow-up specs: UI duration inputs, a sound/notification on
+  transition, multi-cycle (long break every 4th), or a --help-style README.
+
+  Want me to do anything else — write a quick README, push a branch, or open a
+  PR?
+
+✻ Brewed for 22m 28s
