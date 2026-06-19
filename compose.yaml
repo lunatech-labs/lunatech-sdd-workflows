@@ -1,0 +1,22 @@
+# Focus Web UI Docker Compose file (spec 002-focus-web-ui, task T6).
+#
+# Single command to build and run the local demo:
+#
+#   docker compose up
+#
+# No obsolete top-level "version:" key is needed with current Docker Compose.
+services:
+  focus:
+    # Build the image from the local Dockerfile in this directory.
+    build: .
+    # Publish the server port to the host so the browser can reach it.
+    # Host 3000 maps to container 3000 (the server default PORT).
+    ports:
+      - "3000:3000"
+    # Demo durations live here so they are easy to find and change in one place.
+    # These short values let a demo run through the full work then break cycle in
+    # seconds instead of waiting 25 minutes. The server reads WORK_SECONDS and
+    # BREAK_SECONDS at startup via parseDurations(process.env).
+    environment:
+      WORK_SECONDS: "10"
+      BREAK_SECONDS: "5"

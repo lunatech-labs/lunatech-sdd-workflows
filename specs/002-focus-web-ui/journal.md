@@ -63,3 +63,17 @@ Append-only log of decisions, drift, and critic verdicts.
   (not hardcoded); app.js polls /api/state every 1s and wires the POST routes.
   Tasteful extra: self-contained canvas progress ring behind the text MM:SS
   (does not replace it), native canvas only, no deps. No em dashes.
+- T6 (Dockerfile + compose.yaml + .dockerignore): critic PASS. Only the three
+  container files added; suite 41 pass. Critic ran a REAL build/run via podman:
+  image built from node:22-alpine, container served host GET / (200) and
+  GET /api/state (200 with {remainingSeconds:10,...} confirming WORK_SECONDS=10
+  flows through), clean teardown. Dockerfile copies focus.js+lib+public+server,
+  no deps, CMD node server.js. compose build:. ports 3000:3000, env
+  WORK_SECONDS/BREAK_SECONDS spelled correctly. .dockerignore keeps runtime
+  files. No em dashes.
+
+## Phase 4 (DONE)
+
+- All six tasks complete and critic-verified. Status set to DONE. No spec drift
+  recorded during implementation; the only spec change was the user's Gate-2
+  scope amendment (work+break + env durations), agreed before planning.

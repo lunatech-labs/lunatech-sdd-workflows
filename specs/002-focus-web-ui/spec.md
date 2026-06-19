@@ -1,6 +1,6 @@
 # Feature Spec: Focus Web UI - a simple, pretty browser timer
 
-> Status: PLANNED
+> Status: DONE
 > Spec folder: specs/002-focus-web-ui/
 
 ## 1. Mission / Why
@@ -285,7 +285,7 @@ control the timer. The countdown is driven by the Node server (which reuses
 - verifies: AC1, AC7
 - depends_on: T4
 
-### T6: Containerization: Dockerfile + compose.yaml (with WORK_SECONDS/BREAK_SECONDS)
+### [x] T6: Containerization: Dockerfile + compose.yaml (with WORK_SECONDS/BREAK_SECONDS)
 
 - **Does:** create `Dockerfile` (stock official Node base image, e.g.
   `node:22-alpine` or `node:22-slim`; copy source; no installed runtime deps;
