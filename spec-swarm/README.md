@@ -54,7 +54,33 @@ The **spec is the contract**: planner, implementer, and critic all work against 
 
 ## Install
 
-As a plugin, pick one:
+The easiest way is the bundled installer. Run it with no arguments and it
+asks where to put spec-swarm:
+
+```bash
+spec-swarm/bin/install.sh
+```
+
+It offers two targets:
+
+| Target | Goes to | Invoke as |
+|--------|---------|-----------|
+| **global** | `~/.claude/skills/spec-swarm` | `/spec-swarm:sdd` |
+| **project** | `<repo>/.claude/` | `/sdd` |
+
+Global makes it available in every Claude Code session on the machine.
+Project installs it into one repository only. You can also skip the menu:
+
+```bash
+spec-swarm/bin/install.sh global              # every session on this machine
+spec-swarm/bin/install.sh project             # the current repo
+spec-swarm/bin/install.sh project ~/code/app  # a chosen repo
+```
+
+Re-running is safe; it refreshes only spec-swarm's own files and leaves
+anything else in those directories alone.
+
+### Manual install
 
 This plugin lives in the `spec-swarm/` subfolder of the
 [lunatech-sdd-workflows](https://github.com/lunatech-labs/lunatech-sdd-workflows)
@@ -70,7 +96,7 @@ cp -r spec-swarm ~/.claude/skills/spec-swarm
 # Or distribute via a plugin marketplace for /plugin install
 ```
 
-Note: plugin skills/commands are namespaced — invoke as `/spec-swarm:sdd`.
+Note: plugin skills/commands are namespaced, invoke as `/spec-swarm:sdd`.
 
 Or copy into one project (un-namespaced `/sdd`):
 
